@@ -8,6 +8,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -37,8 +40,6 @@ jobs:
         cd electron-app
         npm run build
         npm run dist
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload artifacts (macOS)
       uses: actions/upload-artifact@v4

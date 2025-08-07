@@ -208,3 +208,7 @@ __marimo__/
 
 .tessl
 temp-files
+
+# Node modules  
+node_modules/
+electron-app/node_modules/

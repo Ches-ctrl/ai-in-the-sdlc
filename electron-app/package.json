@@ -57,11 +57,6 @@
           "arch": ["x64"]
         }
       ]
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "Ches-ctrl",
-      "repo": "ai-in-the-sdlc"
     }
   },
   "devDependencies": {
