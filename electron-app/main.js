@@ -1,10 +1,34 @@
 const { app, BrowserWindow, nativeTheme, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 let mainWindow;
 const isDev = process.env.NODE_ENV !== 'production';
 
 function createWindow() {
+  // Set dock icon for macOS after app is ready
+  if (process.platform === 'darwin') {
+    const icnsPath = path.join(__dirname, 'assets/icons/icon.icns');
+    const pngPath = path.join(__dirname, 'assets/icons/icon.png');
+    
+    try {
+      if (fs.existsSync(icnsPath)) {
+        app.dock.setIcon(icnsPath);
+      } else if (fs.existsSync(pngPath)) {
+        app.dock.setIcon(pngPath);
+      }
+    } catch (error) {
+      console.warn('Could not set dock icon:', error.message);
+      // Fallback to PNG
+      try {
+        if (fs.existsSync(pngPath)) {
+          app.dock.setIcon(pngPath);
+        }
+      } catch (fallbackError) {
+        console.warn('PNG fallback also failed:', fallbackError.message);
+      }
+    }
+  }
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -18,7 +42,9 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false
     },
-    icon: path.join(__dirname, 'assets/icons/icon.icns')
+    icon: fs.existsSync(path.join(__dirname, 'assets/icons/icon.png')) 
+      ? path.join(__dirname, 'assets/icons/icon.png')
+      : undefined
   });
 
   if (isDev) {
