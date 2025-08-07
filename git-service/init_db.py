@@ -1,10 +1,13 @@
 from pymongo.operations import SearchIndexModel
 from pymongo import MongoClient
-
+import os
 import openai
+from dotenv import load_dotenv
 
+load_dotenv()
 
-MONGO_URI = "mongodb+srv://community:Ey0dj508fl0YXqgSrtIDomqag@cluster0.ndcxrq.mongodb.net/"
+MONGO_URI = os.getenv("MONGO_URI")
+
 
 client = MongoClient(MONGO_URI)
 db = client.get_database("GitDaddy")

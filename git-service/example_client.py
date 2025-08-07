@@ -24,6 +24,7 @@ def test_session_endpoints():
     print(json.dumps(start_response.json(), indent=2, default=str))
     
     session_id = start_response.json()["session_id"]
+    print(f"Session ID: {session_id}")
     
     # End session
     end_response = requests.post(
@@ -42,87 +43,26 @@ def test_session_endpoints():
     print("\n✅ Session End Response:")
     print(json.dumps(end_response.json(), indent=2, default=str))
 
-async def test_websocket():
+    return session_id
+
+async def test_websocket(session_id: str):
     """Test the WebSocket command execution - client receives and executes commands"""
     print("\n🔌 Testing WebSocket Command Execution...")
     
     try:
-        import subprocess
         async with websockets.connect("ws://localhost:8000/ws/execute") as websocket:
             print("✅ Connected to WebSocket server")
             print("🎧 Listening for commands from server...")
             
-            while True:
-                try:
-                    # Receive command from server
-                    command_data = await websocket.recv()
-                    command_json = json.loads(command_data)
-                    command = command_json.get("command", "")
-                    
-                    print(f"\n📨 Received command from server: {command}")
-                    
-                    if not command:
-                        error_response = {
-                            "error": "No command provided",
-                            "return_code": -1,
-                            "stdout": "",
-                            "stderr": "No command provided"
-                        }
-                        await websocket.send(json.dumps(error_response))
-                        continue
-                    
-                    # Execute command locally
-                    try:
-                        print(f"⚡ Executing command: {command}")
+            # send message to server
+            await websocket.send(json.dumps({
+                "session_id": session_id,
+                "message": "done"
+            }))
 
-                        response = {
-                            "stdout": "success",
-                            "stderr": "",
-                            "return_code": 0,
-                            "command": command
-                        }
-                        # Send result back to server
-                        await websocket.send(json.dumps(response))
-                        
-                    except subprocess.TimeoutExpired:
-                        error_response = {
-                            "error": "Command timed out after 30 seconds",
-                            "return_code": -1,
-                            "stdout": "",
-                            "stderr": "Command timed out",
-                            "command": command
-                        }
-                        print("⏰ Command timed out")
-                        await websocket.send(json.dumps(error_response))
-                        
-                    except Exception as e:
-                        error_response = {
-                            "error": f"Command execution error: {str(e)}",
-                            "return_code": -1,
-                            "stdout": "",
-                            "stderr": str(e),
-                            "command": command
-                        }
-                        print(f"❌ Command execution error: {str(e)}")
-                        await websocket.send(json.dumps(error_response))
-                        
-                except json.JSONDecodeError:
-                    error_response = {
-                        "error": "Invalid JSON format received from server",
-                        "return_code": -1,
-                        "stdout": "",
-                        "stderr": "Invalid JSON format"
-                    }
-                    print("❌ Invalid JSON received from server")
-                    await websocket.send(json.dumps(error_response))
-                    
-                except websockets.exceptions.ConnectionClosed:
-                    print("🔌 Server closed the connection")
-                    break
-                    
-                except Exception as e:
-                    print(f"❌ Unexpected error: {str(e)}")
-                    break
+            # receive message from server
+            message = await websocket.recv()
+            print(f"🎧 Received message from server: {message}")
             
     except Exception as e:
         print(f"❌ WebSocket error: {e}")
@@ -133,13 +73,13 @@ if __name__ == "__main__":
     
     # Test HTTP endpoints
     try:
-        test_session_endpoints()
+        session_id = test_session_endpoints()
     except Exception as e:
         print(f"❌ HTTP endpoint error: {e}")
     
     # Test WebSocket
     try:
-        asyncio.run(test_websocket())
+        asyncio.run(test_websocket(session_id))
     except Exception as e:
         print(f"❌ WebSocket test error: {e}")
     

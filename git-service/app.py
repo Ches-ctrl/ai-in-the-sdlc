@@ -7,44 +7,14 @@ import asyncio
 import json
 import uuid
 
+from repository.mongo_client import get_mongo_client, MongoClientService
+from src.models import SessionStartRequest, SessionStartResponse, \
+    SessionEndRequest, SessionEndResponse, SessionInfo, SessionEndInfo, \
+    RawLogsRequest
+
 app = FastAPI(title="Git Service API", version="1.0.0")
+mongo_client: MongoClientService = get_mongo_client()
 
-# Minimalistic Models
-class SessionStartRequest(BaseModel):
-    user_prompt: str
-
-class SessionStartResponse(BaseModel):
-    message: str
-    session_id: str
-
-class SessionEndRequest(BaseModel):
-    session_id: str
-    final_output: str
-    status: str
-    metadata: Optional[Dict[str, Any]] = None
-
-class SessionEndResponse(BaseModel):
-    message: str
-
-# Internal models for session data we send out
-class SessionInfo(BaseModel):
-    user_prompt: str
-    session_id: str
-    timestamp: datetime
-    git_commit_hash: str
-
-class SessionEndInfo(BaseModel):
-    session_id: str
-    timestamp: datetime
-    status: str
-
-class CommandRequest(BaseModel):
-    command: str
-
-class CommandResponse(BaseModel):
-    stdout: str
-    stderr: str
-    return_code: int
 
 # Store for session information (in production, use a proper database)
 active_sessions: Dict[str, SessionInfo] = {}
@@ -65,6 +35,22 @@ def get_current_git_commit():
     except Exception as e:
         return f"Error getting git commit: {str(e)}"
 
+# Health check endpoint
+@app.get("/health")
+async def health_check(): 
+    return {"running": True}
+
+# Root endpoint
+@app.get("/")
+async def root():
+    return {"message": "Git Service API is running"}
+
+@app.post("/logs/raw")
+async def raw_logs(request: RawLogsRequest):
+    print(f"[RAW LOGS] Received raw logs: {request.data}")
+    mongo_client.insert_log(request.data)
+    return {"message": "Logs received"}
+
 # Session started endpoint - generates and sends session info, returns OK
 @app.post("/session/start", response_model=SessionStartResponse)
 async def start_session(request: SessionStartRequest):
@@ -78,7 +64,7 @@ async def start_session(request: SessionStartRequest):
         user_prompt=request.user_prompt,
         session_id=session_id,
         timestamp=timestamp,
-        git_commit_hash=git_commit_hash
+        git_commit_hash=git_commit_hash,
     )
     
     # Store session info (in production, send to external service)
@@ -93,96 +79,65 @@ async def start_session(request: SessionStartRequest):
 # Session ended endpoint - sends session end info, returns OK  
 @app.post("/session/end", response_model=SessionEndResponse)
 async def end_session(request: SessionEndRequest):
-    # For now, we'll get the most recent session (in production, pass session_id)
-    if active_sessions:
-        latest_session_id = list(active_sessions.keys())[-1]
-        session_info = active_sessions[latest_session_id]
-        
-        # Create session end info to send out
-        session_end_info = SessionEndInfo(
-            session_id=session_info.session_id,
-            timestamp=datetime.now(),
-            status="completed"
-        )
-        
-        # Log the session end information being sent
-        print(f"[SESSION END] Sending session end info: {session_end_info.model_dump_json()}")
-        
-        # Remove from active sessions
-        del active_sessions[latest_session_id]
-    else:
-        print("[SESSION END] No active sessions found")
+    session_id = request.session_id
+    
+    
+    # Store sesionEndRequest on SessionInfo
+    active_sessions[session_id].session_end_request = request
     
     # Return simple OK response
     return SessionEndResponse(message="OK")
 
-# WebSocket for command execution
+# WebSocket for command execution with session ID
 @app.websocket("/ws/execute")
 async def websocket_execute_command(websocket: WebSocket):
     await websocket.accept()
-    print("Client connected to WebSocket")
     
     try:
-        # List of commands to send to the client
-        commands_to_execute = [
-            "git status",
-            "ls -la",
-            "pwd",
-            "git log --oneline -5"
-        ]
+
+        async def start_done(session_id: str):
+            print(f"\n\n\nSession {session_id} is done\n\n\n")
+            print(f"Session info: {active_sessions[session_id].model_dump_json()}")
+            pass
         
-        # Send commands to client and receive results
-        for command in commands_to_execute:
-            print(f"Sending command to client: {command}")
-            
-            # Send command to client
-            command_request = {"command": command}
-            await websocket.send_text(json.dumps(command_request))
-            
-            # Wait for execution result from client
-            try:
-                result_data = await websocket.receive_text()
-                result = json.loads(result_data)
-                
-                print(f"Received result from client:")
-                print(f"  Command: {command}")
-                print(f"  Return Code: {result.get('return_code', 'Unknown')}")
-                print(f"  Output: {result.get('stdout', '')[:100]}...")  # First 100 chars
-                
-                if result.get('stderr'):
-                    print(f"  Error: {result.get('stderr', '')[:100]}...")
+        async def handle_client_messages():
+            while True:
+                try:
+                    data = await websocket.receive_text()
+                    result = json.loads(data)
+
+                    # Verify session exists
+                    if result.get('session_id') not in active_sessions:
+                        print(f"❌ Invalid session ID: {result.get('session_id')}")
+                        print(f"Active sessions: {active_sessions.keys()}")
+                        await websocket.send_text(json.dumps({"error": "Invalid session ID"}))
+                        return
                     
-            except json.JSONDecodeError:
-                print(f"❌ Invalid JSON response from client for command: {command}")
-            except Exception as e:
-                print(f"❌ Error receiving result for command '{command}': {str(e)}")
-                break
-            
-            # Small delay between commands
-            await asyncio.sleep(1)
+                    if result.get('message') == 'done':
+                        status = await start_done(result.get('session_id'))
+                    
+                    await websocket.send_text(json.dumps({
+                        "message": result.get('message'),
+                        "status": status
+                    }))
+                        
+                except json.JSONDecodeError:
+                    print(f"❌ Invalid JSON response from client")
+                except WebSocketDisconnect:
+                    break
+                # except Exception as e:
+                #     print(f"❌ Error receiving message: {str(e)}")
+                #     break
         
-        print("✅ All commands sent and processed")
-        
-        # Keep connection alive to receive any additional messages
-        while True:
-            try:
-                data = await websocket.receive_text()
-                print(f"Additional message from client: {data}")
-            except WebSocketDisconnect:
-                break
+        # Run both tasks concurrently
+        await handle_client_messages()
                 
     except WebSocketDisconnect:
-        print("WebSocket disconnected")
+        print(f"WebSocket disconnected")
     except Exception as e:
         print(f"WebSocket error: {str(e)}")
 
-@app.get("/")
-async def root():
-    return {"message": "Git Service API is running"}
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "timestamp": datetime.now()}
 
 # Helper endpoint to get session information (for debugging/monitoring)
 @app.get("/sessions")
