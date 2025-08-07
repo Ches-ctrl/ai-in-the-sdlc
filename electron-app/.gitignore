@@ -1,0 +1,5 @@
+
+# Build outputs
+electron-app/release/
+electron-app/dist/
+electron-app/node_modules/
