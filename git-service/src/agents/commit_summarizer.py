@@ -1,10 +1,22 @@
-"""Simple commit summarizer agent using Claude SDK."""
+"""Simple commit summarizer agent using Claude Code SDK."""
 
 import os
 from typing import Dict, Any, List
 from datetime import datetime
-import anthropic
 from dotenv import load_dotenv
+
+try:
+    # Try to import Claude Code SDK (requires Python 3.10+)
+    from claude_code_sdk import query, ClaudeCodeOptions
+    from claude_code_sdk.types import (
+        AssistantMessage, TextBlock, ResultMessage,
+        ToolUseBlock, ToolResultBlock
+    )
+    CLAUDE_CODE_SDK_AVAILABLE = True
+except ImportError:
+    # Fall back to Anthropic SDK if Claude Code SDK not available
+    import anthropic
+    CLAUDE_CODE_SDK_AVAILABLE = False
 
 from .agent_base import AgentBase
 
@@ -24,14 +36,21 @@ class CommitSummarizerAgent(AgentBase):
         super().__init__(name="CommitSummarizer", verbose=verbose)
         self.mongo_client = mongo_client
         
-        # Try to get Anthropic API key, fall back to OpenAI key if not available
-        api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY")
-        if not api_key or api_key == "your_openai_api_key_here":
-            # Use a mock response if no valid API key
-            self.anthropic_client = None
-            self._log("No valid API key found, will use mock response", "warning")
+        # Determine which SDK to use
+        self.use_claude_code = CLAUDE_CODE_SDK_AVAILABLE
+        
+        if self.use_claude_code:
+            self._log("Using Claude Code SDK for summaries")
+            # Claude Code SDK will use the Claude CLI authentication
         else:
-            self.anthropic_client = anthropic.Anthropic(api_key=api_key)
+            # Fall back to Anthropic SDK
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key or api_key == "your_anthropic_api_key_here":
+                self.anthropic_client = None
+                self._log("No valid Anthropic API key found, will use mock response", "warning")
+            else:
+                self.anthropic_client = anthropic.Anthropic(api_key=api_key)
+                self._log("Using Anthropic SDK for summaries")
     
     async def execute(self, limit: int = 10) -> Dict[str, Any]:
         """Execute the commit summarization.
@@ -59,9 +78,11 @@ class CommitSummarizerAgent(AgentBase):
             # Format commits for Claude
             commits_text = self._format_commits_for_prompt(recent_commits)
             
-            # Generate summary using Claude or mock
-            if self.anthropic_client:
-                summary = await self._generate_claude_summary(commits_text, len(recent_commits))
+            # Generate summary using appropriate method
+            if self.use_claude_code:
+                summary = await self._generate_claude_code_summary(commits_text, len(recent_commits))
+            elif hasattr(self, 'anthropic_client') and self.anthropic_client:
+                summary = await self._generate_anthropic_summary(commits_text, len(recent_commits))
             else:
                 summary = self._generate_mock_summary(recent_commits)
             
@@ -104,8 +125,8 @@ class CommitSummarizerAgent(AgentBase):
         
         return "\n".join(lines)
     
-    async def _generate_claude_summary(self, commits_text: str, count: int) -> str:
-        """Generate summary using Claude API.
+    async def _generate_anthropic_summary(self, commits_text: str, count: int) -> str:
+        """Generate summary using Anthropic API.
         
         Args:
             commits_text: Formatted commits text
@@ -138,7 +159,63 @@ Keep the summary concise but informative (3-5 paragraphs)."""
             return message.content[0].text
             
         except Exception as e:
-            self._log(f"Error calling Claude API: {str(e)}", "error")
+            self._log(f"Error calling Anthropic API: {str(e)}", "error")
+            # Fall back to mock summary
+            return self._generate_mock_summary([])
+    
+    async def _generate_claude_code_summary(self, commits_text: str, count: int) -> str:
+        """Generate summary using Claude Code SDK.
+        
+        Args:
+            commits_text: Formatted commits text
+            count: Number of commits
+            
+        Returns:
+            Summary text
+        """
+        try:
+            prompt = f"""Please provide a concise summary of these {count} recent git commits.
+
+{commits_text}
+
+Provide:
+1. A brief overview of what was accomplished
+2. Key patterns or themes you notice
+3. Types of files/components that were modified
+4. Any potential concerns or observations
+
+Keep the summary concise but informative (3-5 paragraphs)."""
+
+            # Configure Claude Code options
+            options = ClaudeCodeOptions(
+                system_prompt="You are a git commit analyst. Analyze the commits and provide insights.",
+                max_turns=1,  # Single response
+                # We don't need tools for summarization, but they're available if needed
+                allowed_tools=[]
+            )
+            
+            # Collect the summary from Claude Code
+            summary_text = ""
+            
+            async for message in query(prompt=prompt, options=options):
+                if isinstance(message, AssistantMessage):
+                    # Process Claude's response
+                    for block in message.content:
+                        if isinstance(block, TextBlock):
+                            summary_text += block.text
+                elif isinstance(message, ResultMessage):
+                    # Log final result info if verbose
+                    if self.verbose and message.total_cost_usd > 0:
+                        self._log(f"Claude Code cost: ${message.total_cost_usd:.4f}")
+            
+            if summary_text:
+                return summary_text
+            else:
+                self._log("No response from Claude Code, using mock", "warning")
+                return self._generate_mock_summary([])
+            
+        except Exception as e:
+            self._log(f"Error calling Claude Code SDK: {str(e)}", "error")
             # Fall back to mock summary
             return self._generate_mock_summary([])
     
