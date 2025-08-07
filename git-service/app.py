@@ -23,22 +23,6 @@ mongo_client: MongoClientService = get_mongo_client()
 # Store for session information (in production, use a proper database)
 active_sessions: Dict[str, SessionInfo] = {}
 
-# Helper function to get current git commit hash
-def get_current_git_commit():
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            cwd="."
-        )
-        if result.returncode == 0:
-            return result.stdout.strip()
-        else:
-            return "No git repository found"
-    except Exception as e:
-        return f"Error getting git commit: {str(e)}"
-
 # Health check endpoint
 @app.get("/health")
 async def health_check(): 
@@ -61,7 +45,6 @@ async def start_session(request: SessionStartRequest):
     # Generate session information
     session_id = str(uuid.uuid4())
     timestamp = datetime.now()
-    git_commit_hash = get_current_git_commit()
 
     # Analyze prompt
     features = await analyze_prompt(request.user_prompt)
@@ -71,7 +54,7 @@ async def start_session(request: SessionStartRequest):
         user_prompt=request.user_prompt,
         session_id=session_id,
         timestamp=timestamp,
-        git_commit_hash=git_commit_hash,
+        git_commit_hash="mock_commit_hash",
         features=features
     )
     
@@ -104,13 +87,25 @@ async def websocket_execute_command(websocket: WebSocket):
     try:
 
         async def start_done(session_id: str):
-            print(f"\n\n\nSession {session_id} is done\n\n\n")
-            print(f"Session info: {active_sessions[session_id].model_dump_json()}")
+            print(f"\n\n\nSession {session_id} is done")
+            print(f"Session info: {active_sessions[session_id].model_dump_json()}\n\n\n")
             commit_messages = await find_commit_messages(websocket, active_sessions[session_id].features)
             print(f"Commit messages: {commit_messages.model_dump_json()}")
 
             if len(commit_messages.commit_messages) == 0:
                 return {"status": "success", "message": "No files to commit"}
+            
+            # Add messages to mongo_async
+            for commit_message in commit_messages.commit_messages:
+                mongo_client.insert_commit(
+                    commit_hash="mock_commit_hash",
+                    message=commit_message.message,
+                    author="AI",
+                    prompt=active_sessions[session_id].user_prompt,
+                    timestamp=datetime.now(),
+                    files_changed=commit_message.files,
+                )
+                print(f"Inserted commit: {commit_message.message}")
 
             results = await execute_commits(commit_messages.commit_messages, websocket)
             print(f"Results: {results}")
@@ -130,11 +125,11 @@ async def websocket_execute_command(websocket: WebSocket):
                         await websocket.send_text(json.dumps({"error": "Invalid session ID"}))
                         return
                     
-                    if result.get('message') == 'done':
+                    if result.get('message_type') == 'session_finished':
                         status = await start_done(result.get('session_id'))
                     
                     await websocket.send_text(json.dumps({
-                        "message": result.get('message'),
+                        "message_type": result.get('message_type'),
                         "status": status
                     }))
                         

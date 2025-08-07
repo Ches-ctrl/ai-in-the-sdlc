@@ -7,6 +7,7 @@ import requests
 import json
 import asyncio
 import websockets
+import subprocess
 
 # API Base URL
 BASE_URL = "http://localhost:8000"
@@ -18,7 +19,7 @@ def test_session_endpoints():
     # Start session
     start_response = requests.post(
         f"{BASE_URL}/session/start",
-        json={"user_prompt": "Fix the authentication bug and change color of the button to blue"}
+        json={"user_prompt": "I want to create a Flask app and add some text files describing the coding guidelines."}
     )
     print("📝 Session Start Response:")
     print(json.dumps(start_response.json(), indent=2, default=str))
@@ -31,12 +32,12 @@ def test_session_endpoints():
         f"{BASE_URL}/session/end",
         json={
             "session_id": session_id,
-            "final_output": "Authentication bug has been fixed successfully",
+            "final_output": "Created all files successfully",
             "status": "success",
             "metadata": {
-                "tool_calls": 8,
-                "todos_completed": 5,
-                "files_modified": ["auth.py", "login.py"]
+                "tool_calls": 3,
+                "todos_completed": 3,
+                "files_modified": ["Hi.txt", "bla.txt", "app.py"]
             }
         }
     )
@@ -57,7 +58,7 @@ async def test_websocket(session_id: str):
             # send message to server
             await websocket.send(json.dumps({
                 "session_id": session_id,
-                "message": "done"
+                "message_type": "session_finished"
             }))
 
             while True:
@@ -67,13 +68,28 @@ async def test_websocket(session_id: str):
 
                 message = json.loads(message)
                 if message.get('status') == "success":
+                    print(f"🎧 Session {session_id} is done")
+                    print(f"🎧 Message: {message.get('message')}")
                     break
 
-                await websocket.send(json.dumps({
-                    "stdout": "No Files to Commit",
-                    "stderr": "",
-                    "return_code": 0
-                }))
+                # If this is an execute_command message, respond with command_executed
+                if message.get('message_type') == "execute_command":
+                    # Target path and subcommand
+
+                    result = subprocess.run(
+                        message.get('command'),
+                        cwd="/Users/floris.fok/Library/CloudStorage/OneDrive-Prosus-Naspers/Documents/hackathon/Proxy/test_git",
+                        shell=True,
+                        capture_output=True,
+                        text=True
+                    )
+
+                    print(f"\n\nResult: {result.stdout}\n\n")
+
+                    await websocket.send(json.dumps({
+                        "message_type": "command_executed",
+                        "output": result.stdout
+                    }))
             
     except Exception as e:
         print(f"❌ WebSocket error: {e}")

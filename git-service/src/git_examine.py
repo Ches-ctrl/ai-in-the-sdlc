@@ -24,7 +24,7 @@ class Response(BaseModel):
     features: List[Feature]
 
 class CommitMessage(BaseModel):
-    message: List[str]
+    message: str
     files: List[str]
 
 class CommitMessages(BaseModel):
@@ -54,10 +54,11 @@ async def run_git_command(command: List[str], websocket: WebSocket) -> str:
     try:
         print(f"Running command: {' '.join(full_command)}")
         await websocket.send_text(json.dumps({
+            "message_type": "execute_command",
             "command": " ".join(full_command),
         }))
         output = await websocket.receive_text()
-        return json.loads(output)['stdout']
+        return json.loads(output)['output']
     
     except Exception as e:
         print(f"Error running git command: {e}")
@@ -96,14 +97,28 @@ async def get_untracked_files(websocket: WebSocket) -> List[str]:
     Returns:
         List[str]: List of untracked file paths
     """
+    print("CHECKING UNTRACKED FILES")
+    print("="*50)
     status_output = await run_git_command(['status', '--porcelain'], websocket)
     untracked_files = []
+
+    print("CHECKING UNTRACKED FILES")
+    print("="*50)
+    print(f"Status output: {status_output}")
     
     for line in status_output.strip().split('\n'):
-        if line.startswith('??'):
+        if line.strip().startswith('??'):
             # Remove the '?? ' prefix and get the filename
             filename = line[3:]
             untracked_files.append(filename)
+        if line.strip().startswith('A'):
+            # Remove the 'A ' prefix and get the filename
+            filename = line[2:]
+            untracked_files.append(filename.strip())
+        if line.strip().startswith('M'):
+            # Remove the 'M ' prefix and get the filename
+            filename = line[2:]
+            untracked_files.append(filename.strip())
     
     return untracked_files
 
