@@ -169,7 +169,8 @@ async def examine_untracked_files(websocket: WebSocket) -> Dict[str, Dict[str, s
     
     return all_diffs
 
-def analyze_diff(diffs: dict[str, str], features: list[str]) -> str:
+from typing import Dict, List
+def analyze_diff(diffs: Dict[str, str], features: List[str]) -> str:
     """Examine each diff and assign  to features"""
     SYSTEM_PROMPT = """You are a helpful assistant that analyzes git diffs and assigns features to them.
 

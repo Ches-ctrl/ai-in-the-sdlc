@@ -17,6 +17,7 @@ from src.models import SessionStartRequest, SessionStartResponse, \
 from src.git_examine import find_commit_messages
 from src.commit_execute import execute_commits
 from src.services.investigation_service import InvestigationService
+from src.agents.commit_summarizer import CommitSummarizerAgent
 
 app = FastAPI(title="Git Service API", version="1.0.0")
 mongo_client: MongoClientService = get_mongo_client()
@@ -158,6 +159,42 @@ async def websocket_execute_command(websocket: WebSocket):
 @app.get("/sessions")
 async def get_sessions():
     return {"active_sessions": list(active_sessions.keys()), "count": len(active_sessions)}
+
+
+# Commit Summary Endpoint
+@app.get("/summarize/commits")
+async def summarize_commits(limit: int = 10):
+    """Get a summary of recent commits using Claude.
+    
+    Args:
+        limit: Number of recent commits to summarize (default: 10)
+        
+    Returns:
+        Summary of recent commits
+    """
+    try:
+        # Create summarizer agent
+        summarizer = CommitSummarizerAgent(mongo_client, verbose=True)
+        
+        # Run the summarization
+        result = await summarizer.run(limit=limit)
+        
+        if result["success"]:
+            return {
+                "status": "success",
+                "summary": result["result"]["summary"],
+                "commit_count": result["result"]["commit_count"],
+                "time_range": result["result"]["time_range"],
+                "execution_time": result["execution_time_seconds"]
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Summarization failed: {result.get('error', 'Unknown error')}"
+            )
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Issue Investigation Endpoints
