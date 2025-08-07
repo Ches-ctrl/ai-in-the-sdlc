@@ -1,0 +1,4 @@
+{
+  "name": "ai-in-the-sdlc",
+  "python.testCommand": "uv run python -m pytest {files}"
+}
