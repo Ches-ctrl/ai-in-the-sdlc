@@ -42,7 +42,7 @@ def embed_text(text: str) -> list[float]:
 # Create a function to insert a document into the collection
 def insert_document(text: str) -> None:
     embedding = embed_text(text)
-    collection.insert_one({"text": text, "embedding": embedding})
+    collection.insert_one({"text": text, "embedding": embedding, "delete_me": True})
 
 
 
@@ -86,3 +86,6 @@ if __name__ == "__main__":
     # Print results
     for i in results:
         print(i)
+
+    # Delete the collection
+    collection.delete_many({"delete_me": True})
