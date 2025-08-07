@@ -11,13 +11,16 @@ from repository.mongo_client import get_mongo_client, MongoClientService
 from src.prompt_examine import analyze_prompt
 from src.models import SessionStartRequest, SessionStartResponse, \
     SessionEndRequest, SessionEndResponse, SessionInfo, SessionEndInfo, \
-    RawLogsRequest
+    RawLogsRequest, IssueInvestigationRequest, IssueInvestigationResponse, \
+    InvestigationProgress
 
 from src.git_examine import find_commit_messages
 from src.commit_execute import execute_commits
+from src.services.investigation_service import InvestigationService
 
 app = FastAPI(title="Git Service API", version="1.0.0")
 mongo_client: MongoClientService = get_mongo_client()
+investigation_service = InvestigationService(mongo_client)
 
 
 # Store for session information (in production, use a proper database)
@@ -155,6 +158,146 @@ async def websocket_execute_command(websocket: WebSocket):
 @app.get("/sessions")
 async def get_sessions():
     return {"active_sessions": list(active_sessions.keys()), "count": len(active_sessions)}
+
+
+# Issue Investigation Endpoints
+@app.post("/investigate/issue", response_model=Dict[str, str])
+async def investigate_issue(request: IssueInvestigationRequest):
+    """Start a new issue investigation.
+    
+    Args:
+        request: Investigation request with issue details
+        
+    Returns:
+        Dictionary with investigation_id and status
+    """
+    try:
+        investigation_id = await investigation_service.start_investigation(request)
+        return {
+            "investigation_id": investigation_id,
+            "status": "started",
+            "message": "Investigation started successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/investigate/{investigation_id}")
+async def get_investigation_status(investigation_id: str):
+    """Get the status and results of an investigation.
+    
+    Args:
+        investigation_id: Unique investigation identifier
+        
+    Returns:
+        Investigation status and results if available
+    """
+    status = await investigation_service.get_investigation_status(investigation_id)
+    
+    if status is None:
+        raise HTTPException(status_code=404, detail="Investigation not found")
+    
+    return status
+
+
+@app.get("/investigate/{investigation_id}/results", response_model=IssueInvestigationResponse)
+async def get_investigation_results(investigation_id: str):
+    """Get the results of a completed investigation.
+    
+    Args:
+        investigation_id: Unique investigation identifier
+        
+    Returns:
+        Investigation results
+    """
+    results = await investigation_service.get_investigation_results(investigation_id)
+    
+    if results is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Investigation not found or not yet completed"
+        )
+    
+    return results
+
+
+@app.get("/investigations")
+async def list_investigations():
+    """List all investigations.
+    
+    Returns:
+        List of investigation summaries
+    """
+    return {
+        "investigations": investigation_service.list_investigations(),
+        "count": len(investigation_service.active_investigations)
+    }
+
+
+# WebSocket for real-time investigation updates
+@app.websocket("/ws/investigate")
+async def websocket_investigate(websocket: WebSocket):
+    """WebSocket endpoint for real-time investigation updates."""
+    await websocket.accept()
+    
+    try:
+        # Wait for investigation request
+        data = await websocket.receive_text()
+        request_data = json.loads(data)
+        
+        # Create investigation request
+        request = IssueInvestigationRequest(**request_data)
+        
+        # Progress callback to send updates via WebSocket
+        async def progress_callback(progress: InvestigationProgress):
+            await websocket.send_json({
+                "type": "progress",
+                "data": progress.model_dump(mode="json")
+            })
+        
+        # Start investigation with progress callback
+        investigation_id = await investigation_service.start_investigation(
+            request, progress_callback
+        )
+        
+        # Send initial response
+        await websocket.send_json({
+            "type": "started",
+            "investigation_id": investigation_id
+        })
+        
+        # Wait for investigation to complete
+        while True:
+            await asyncio.sleep(1)
+            
+            # Check if investigation is complete
+            results = await investigation_service.get_investigation_results(investigation_id)
+            if results:
+                # Send final results
+                await websocket.send_json({
+                    "type": "completed",
+                    "data": results.model_dump(mode="json")
+                })
+                break
+            
+            # Check if investigation failed
+            status = await investigation_service.get_investigation_status(investigation_id)
+            if status and status.get("status") == "failed":
+                await websocket.send_json({
+                    "type": "failed",
+                    "error": status.get("results", {}).get("error", "Unknown error")
+                })
+                break
+                
+    except WebSocketDisconnect:
+        print("WebSocket disconnected")
+    except Exception as e:
+        print(f"WebSocket error: {str(e)}")
+        await websocket.send_json({
+            "type": "error",
+            "error": str(e)
+        })
+
 
 if __name__ == "__main__":
     import uvicorn
