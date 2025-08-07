@@ -1,4 +1,5 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from datetime import datetime
@@ -17,6 +18,16 @@ from src.git_examine import find_commit_messages
 from src.commit_execute import execute_commits
 
 app = FastAPI(title="Git Service API", version="1.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 mongo_client: MongoClientService = get_mongo_client()
 
 
@@ -150,6 +161,47 @@ async def websocket_execute_command(websocket: WebSocket):
         print(f"WebSocket error: {str(e)}")
 
 
+
+# Commit endpoints for frontend integration
+@app.get("/commits/recent")
+async def get_recent_commits(limit: int = 10):
+    """Get recent commits from MongoDB"""
+    try:
+        commits = mongo_client.get_recent_commits(limit=limit)
+        return commits
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching commits: {str(e)}")
+
+class SearchCommitsRequest(BaseModel):
+    query_text: str
+    limit: int = 5
+    min_score: float = 0.7
+
+@app.post("/commits/search")
+async def search_commits(request: SearchCommitsRequest):
+    """Search commits using semantic similarity"""
+    try:
+        results = mongo_client.get_commits_by_similarity(
+            query_text=request.query_text,
+            limit=request.limit,
+            min_score=request.min_score
+        )
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
+
+@app.get("/commits/{commit_hash}")
+async def get_commit_by_hash(commit_hash: str):
+    """Get a specific commit by hash"""
+    try:
+        commit = mongo_client.get_commit_by_hash(commit_hash)
+        if not commit:
+            raise HTTPException(status_code=404, detail="Commit not found")
+        return commit
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching commit: {str(e)}")
 
 # Helper endpoint to get session information (for debugging/monitoring)
 @app.get("/sessions")
