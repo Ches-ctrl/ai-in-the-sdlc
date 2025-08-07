@@ -1,10 +1,11 @@
 import subprocess
 import os
 from pydantic import BaseModel, Field
-import re
+import json
 from typing import Dict, List, Optional, Tuple, Literal
 import openai
 from dotenv import load_dotenv
+from fastapi import WebSocket
 
 load_dotenv()
 
@@ -22,7 +23,14 @@ class Feature(BaseModel):
 class Response(BaseModel):
     features: List[Feature]
 
-def run_git_command(command: List[str], repo_path: str) -> str:
+class CommitMessage(BaseModel):
+    message: List[str]
+    files: List[str]
+
+class CommitMessages(BaseModel):
+    commit_messages: List[CommitMessage]
+
+async def run_git_command(command: List[str], websocket: WebSocket) -> str:
     """
     Run a git command in a specified repository path and return stdout.
     
@@ -37,31 +45,26 @@ def run_git_command(command: List[str], repo_path: str) -> str:
         subprocess.CalledProcessError: If the git command fails
         FileNotFoundError: If the repository path doesn't exist
     """
-    if not os.path.exists(repo_path):
-        raise FileNotFoundError(f"Repository path does not exist: {repo_path}")
+    if websocket is None:
+        raise ValueError("Websocket is required")
     
     # Construct the full git command
     full_command = ['git'] + command
     
     try:
-        print(f"Running command: {' '.join(full_command)} in {repo_path}")
-        result = subprocess.run(
-            full_command,
-            cwd=repo_path,
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        raise subprocess.CalledProcessError(
-            e.returncode, 
-            e.cmd, 
-            f"Git command failed: {e.stderr}"
-        )
+        print(f"Running command: {' '.join(full_command)}")
+        await websocket.send_text(json.dumps({
+            "command": " ".join(full_command),
+        }))
+        output = await websocket.receive_text()
+        return json.loads(output)['stdout']
+    
+    except Exception as e:
+        print(f"Error running git command: {e}")
+        return ""
 
 
-def git_commit(repo_path: str, message: str, add_all: bool = False) -> str:
+async def git_commit(websocket: WebSocket, message: str, add_all: bool = False) -> str:
     """
     Create a git commit with the specified message.
     
@@ -75,15 +78,15 @@ def git_commit(repo_path: str, message: str, add_all: bool = False) -> str:
     """
     if add_all:
         # Add all changes first
-        run_git_command(['add', '.'], repo_path)
+        await run_git_command(['add', '.'], websocket)
     
     # Create the commit
-    commit_output = run_git_command(['commit', '-m', message], repo_path)
+    commit_output = await run_git_command(['commit', '-m', message], websocket)
     return commit_output
 
 
 
-def get_untracked_files(repo_path: str) -> List[str]:
+async def get_untracked_files(websocket: WebSocket) -> List[str]:
     """
     Get a list of untracked files in the repository.
     
@@ -93,7 +96,7 @@ def get_untracked_files(repo_path: str) -> List[str]:
     Returns:
         List[str]: List of untracked file paths
     """
-    status_output = run_git_command(['status', '--porcelain'], repo_path)
+    status_output = await run_git_command(['status', '--porcelain'], websocket)
     untracked_files = []
     
     for line in status_output.strip().split('\n'):
@@ -105,7 +108,7 @@ def get_untracked_files(repo_path: str) -> List[str]:
     return untracked_files
 
 
-def examine_untracked_files(repo_path: str) -> Dict[str, Dict[str, str]]:
+async def examine_untracked_files(websocket: WebSocket) -> Dict[str, Dict[str, str]]:
     """
     Examine untracked files by temporarily adding them, checking the diff, then removing them.
     This allows you to see what the diff would look like for untracked files without permanently adding them.
@@ -124,7 +127,7 @@ def examine_untracked_files(repo_path: str) -> Dict[str, Dict[str, str]]:
             }
         }
     """
-    untracked_files = get_untracked_files(repo_path)
+    untracked_files = await get_untracked_files(websocket)
     all_diffs = {}
     
     if not untracked_files:
@@ -138,19 +141,18 @@ def examine_untracked_files(repo_path: str) -> Dict[str, Dict[str, str]]:
     for file_path in untracked_files:
         try:
             # git add file_path
-            run_git_command(['add', file_path], repo_path)
+            await run_git_command(['add', file_path], websocket)
             # git diff --cached
-            output = run_git_command(['diff', '--cached', file_path], repo_path)
+            output = await run_git_command(['diff', '--cached', file_path], websocket)
             all_diffs[file_path] = output
             # git rm --cached file_path
-            run_git_command(['rm', '--cached', file_path], repo_path)
+            await run_git_command(['rm', '--cached', file_path], websocket)
             
         except subprocess.CalledProcessError as e:
             print(f"  Error examining {file_path}: {e}")
             continue
     
     return all_diffs
-
 
 def analyze_diff(diffs: dict[str, str], features: list[str]) -> str:
     """Examine each diff and assign  to features"""
@@ -207,12 +209,7 @@ Guidelines:
 {diffs_list}
     """
     
-    class CommitMessage(BaseModel):
-        message: List[str]
-        files: List[str]
     
-    class CommitMessages(BaseModel):
-        commit_messages: List[CommitMessage]
 
     diff_list = "- " + "\n- ".join([f"**file_path:** {file_path}\n**diff_file:** {diff_file}\ndiff_idx: {diff_idx}\n\n" for diff_idx, (file_path, diff_file) in enumerate(diffs.items())])
     SYSTEM_PROMPT = SYSTEM_PROMPT.format(diffs_list=diff_list)
@@ -227,6 +224,14 @@ Guidelines:
     )
 
     return response.choices[0].message.parsed
+
+
+async def find_commit_messages(websocket: WebSocket, features: List[str]) -> CommitMessages:
+    """Find commit messages for each feature"""
+    untracked_diffs = await examine_untracked_files(websocket)
+    response = analyze_diff(untracked_diffs, features)
+    commit_messages = create_commit_message(response, untracked_diffs)
+    return commit_messages
 
 # Example usage and testing functions
 if __name__ == "__main__":

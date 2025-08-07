@@ -18,7 +18,7 @@ def test_session_endpoints():
     # Start session
     start_response = requests.post(
         f"{BASE_URL}/session/start",
-        json={"user_prompt": "Fix the authentication bug"}
+        json={"user_prompt": "Fix the authentication bug and change color of the button to blue"}
     )
     print("📝 Session Start Response:")
     print(json.dumps(start_response.json(), indent=2, default=str))
@@ -60,9 +60,20 @@ async def test_websocket(session_id: str):
                 "message": "done"
             }))
 
-            # receive message from server
-            message = await websocket.recv()
-            print(f"🎧 Received message from server: {message}")
+            while True:
+                # receive message from server
+                message = await websocket.recv()
+                print(f"🎧 Received message from server: {message}")
+
+                message = json.loads(message)
+                if message.get('status') == "success":
+                    break
+
+                await websocket.send(json.dumps({
+                    "stdout": "No Files to Commit",
+                    "stderr": "",
+                    "return_code": 0
+                }))
             
     except Exception as e:
         print(f"❌ WebSocket error: {e}")

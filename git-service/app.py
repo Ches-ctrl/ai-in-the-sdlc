@@ -8,9 +8,13 @@ import json
 import uuid
 
 from repository.mongo_client import get_mongo_client, MongoClientService
+from src.prompt_examine import analyze_prompt
 from src.models import SessionStartRequest, SessionStartResponse, \
     SessionEndRequest, SessionEndResponse, SessionInfo, SessionEndInfo, \
     RawLogsRequest
+
+from src.git_examine import find_commit_messages
+from src.commit_execute import execute_commits
 
 app = FastAPI(title="Git Service API", version="1.0.0")
 mongo_client: MongoClientService = get_mongo_client()
@@ -58,6 +62,9 @@ async def start_session(request: SessionStartRequest):
     session_id = str(uuid.uuid4())
     timestamp = datetime.now()
     git_commit_hash = get_current_git_commit()
+
+    # Analyze prompt
+    features = await analyze_prompt(request.user_prompt)
     
     # Create session info to send out
     session_info = SessionInfo(
@@ -65,6 +72,7 @@ async def start_session(request: SessionStartRequest):
         session_id=session_id,
         timestamp=timestamp,
         git_commit_hash=git_commit_hash,
+        features=features
     )
     
     # Store session info (in production, send to external service)
@@ -98,7 +106,16 @@ async def websocket_execute_command(websocket: WebSocket):
         async def start_done(session_id: str):
             print(f"\n\n\nSession {session_id} is done\n\n\n")
             print(f"Session info: {active_sessions[session_id].model_dump_json()}")
-            pass
+            commit_messages = await find_commit_messages(websocket, active_sessions[session_id].features)
+            print(f"Commit messages: {commit_messages.model_dump_json()}")
+
+            if len(commit_messages.commit_messages) == 0:
+                return {"status": "success", "message": "No files to commit"}
+
+            results = await execute_commits(commit_messages.commit_messages, websocket)
+            print(f"Results: {results}")
+            
+            return {"status": "success", "message": commit_messages.model_dump_json()}
         
         async def handle_client_messages():
             while True:

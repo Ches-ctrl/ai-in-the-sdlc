@@ -1,7 +1,6 @@
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
-import asyncio
 
 # Minimalistic Models
 class SessionStartRequest(BaseModel):
@@ -27,6 +26,7 @@ class SessionInfo(BaseModel):
     timestamp: datetime
     git_commit_hash: str
     session_end_request: Optional[SessionEndRequest] = None
+    features: List[str]
 
 class SessionEndInfo(BaseModel):
     session_id: str

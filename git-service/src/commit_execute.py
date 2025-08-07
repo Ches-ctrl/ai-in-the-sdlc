@@ -1,14 +1,15 @@
 from typing import List
 from pydantic import BaseModel
 from git_examine import run_git_command
-
+from fastapi import WebSocket
+import asyncio
 
 class CommitMessage(BaseModel):
     message: List[str]
     files: List[str]
 
 
-def git_add_files(files: List[str], repo_path: str) -> None:
+async def git_add_files(files: List[str], websocket: WebSocket) -> None:
     """
     Add specific files to git staging area.
     
@@ -17,10 +18,10 @@ def git_add_files(files: List[str], repo_path: str) -> None:
         repo_path: Path to the git repository
     """
     for file in files:
-        run_git_command(['add', file], repo_path)
+        await run_git_command(['add', file], websocket)
 
 
-def git_commit_message(message: List[str], repo_path: str) -> str:
+async def git_commit_message(message: List[str], websocket: WebSocket) -> str:
     """
     Create a git commit with the specified message.
     
@@ -32,10 +33,10 @@ def git_commit_message(message: List[str], repo_path: str) -> str:
         str: The output from the git commit command
     """
     commit_msg = ' '.join(message)
-    return run_git_command(['commit', '-m', commit_msg], repo_path)
+    return await run_git_command(['commit', '-m', commit_msg], websocket)
 
 
-def execute_commits(commit_messages: List[CommitMessage], repo_path: str) -> List[str]:
+async def execute_commits(commit_messages: List[CommitMessage], websocket: WebSocket) -> List[str]:
     """
     Execute multiple commits in sequence.
     
@@ -50,10 +51,10 @@ def execute_commits(commit_messages: List[CommitMessage], repo_path: str) -> Lis
     
     for commit_msg in commit_messages:
         # Add files
-        git_add_files(commit_msg.files, repo_path)
+        await git_add_files(commit_msg.files, websocket)
         
         # Commit with message
-        result = git_commit_message(commit_msg.message, repo_path)
+        result = await git_commit_message(commit_msg.message, websocket)
         results.append(result)
     
     return results
@@ -76,7 +77,7 @@ if __name__ == "__main__":
     repo_path = "test_git"
     
     try:
-        results = execute_commits(commit_messages, repo_path)
+        results = asyncio.run(execute_commits(commit_messages, repo_path))
         print("Commit results:")
         for i, result in enumerate(results):
             print(f"Commit {i+1}: {result}")
