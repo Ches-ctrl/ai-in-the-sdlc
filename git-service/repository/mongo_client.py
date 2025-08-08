@@ -191,7 +191,8 @@ class MongoClientService:
                 "files_changed": files_changed or [],
                 "embedding": embedding,
                 "embed_text": embed_text,
-                "created_at": datetime.utcnow()
+                "created_at": datetime.utcnow(),
+                "metadata": metadata
             }
             
             result = self.commits_collection.insert_one(commit_doc)

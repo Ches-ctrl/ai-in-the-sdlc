@@ -3,8 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from datetime import datetime
-import subprocess
-import asyncio
 import json
 import uuid
 
@@ -98,28 +96,24 @@ async def websocket_execute_command(websocket: WebSocket):
     try:
 
         async def start_done(session_id: str):
-            print(f"\n\n\nSession {session_id} is done")
-            print(f"Session info: {active_sessions[session_id].model_dump_json()}\n\n\n")
             commit_messages = await find_commit_messages(websocket, active_sessions[session_id].features)
-            print(f"Commit messages: {commit_messages.model_dump_json()}")
 
             if len(commit_messages.commit_messages) == 0:
                 return {"status": "success", "message": "No files to commit"}
-            
+
+            results = await execute_commits(commit_messages.commit_messages, websocket)
+
             # Add messages to mongo_async
-            for commit_message in commit_messages.commit_messages:
+            for commit_message, result in zip(commit_messages.commit_messages, results):
                 mongo_client.insert_commit(
-                    commit_hash="mock_commit_hash",
+                    commit_hash=result["commit_hash"],
                     message=commit_message.message,
                     author="AI",
                     prompt=active_sessions[session_id].user_prompt,
                     timestamp=datetime.now(),
                     files_changed=commit_message.files,
+                    metadata=result
                 )
-                print(f"Inserted commit: {commit_message.message}")
-
-            results = await execute_commits(commit_messages.commit_messages, websocket)
-            print(f"Results: {results}")
             
             return {"status": "success", "message": commit_messages.model_dump_json()}
         
@@ -148,9 +142,9 @@ async def websocket_execute_command(websocket: WebSocket):
                     print(f"❌ Invalid JSON response from client")
                 except WebSocketDisconnect:
                     break
-                # except Exception as e:
-                #     print(f"❌ Error receiving message: {str(e)}")
-                #     break
+                except Exception as e:
+                    print(f"❌ Error receiving message: {str(e)}")
+                    break
         
         # Run both tasks concurrently
         await handle_client_messages()
