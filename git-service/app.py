@@ -64,7 +64,8 @@ async def start_session(request: SessionStartRequest):
         session_id=session_id,
         timestamp=timestamp,
         git_commit_hash="mock_commit_hash",
-        features=features
+        features=features,
+        cwd=request.cwd
     )
     
     # Store session info (in production, send to external service)
@@ -81,6 +82,9 @@ async def start_session(request: SessionStartRequest):
 async def end_session(request: SessionEndRequest):
     session_id = request.session_id
     
+    # Check cwd
+    if active_sessions[session_id].cwd == "None":
+        active_sessions[session_id].cwd = request.cwd
     
     # Store sesionEndRequest on SessionInfo
     active_sessions[session_id].session_end_request = request
@@ -99,7 +103,8 @@ async def websocket_execute_command(websocket: WebSocket):
             commit_messages = await find_commit_messages(websocket, active_sessions[session_id].features)
 
             if len(commit_messages.commit_messages) == 0:
-                return {"status": "success", "message": "No files to commit"}
+                del active_sessions[session_id]
+                return {"status": "success", "message": "No files to commit", "finished": True}
 
             results = await execute_commits(commit_messages.commit_messages, websocket)
 
@@ -112,10 +117,12 @@ async def websocket_execute_command(websocket: WebSocket):
                     prompt=active_sessions[session_id].user_prompt,
                     timestamp=datetime.now(),
                     files_changed=commit_message.files,
+                    cwd=active_sessions[session_id].cwd,
                     metadata=result
                 )
             
-            return {"status": "success", "message": commit_messages.model_dump_json()}
+            del active_sessions[session_id]
+            return {"status": "success", "message": commit_messages.model_dump_json(), "finished": True}
         
         async def handle_client_messages():
             while True:

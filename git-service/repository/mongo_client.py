@@ -156,6 +156,7 @@ class MongoClientService:
                      author: str,
                      prompt: str,
                      timestamp: datetime,
+                     cwd: str,
                      files_changed: Optional[List[str]] = None,
                      metadata: Optional[Dict[str, Any]] = None) -> str:
         """
@@ -188,6 +189,7 @@ class MongoClientService:
                 "prompt": prompt,
                 "author": author,
                 "timestamp": timestamp,
+                "cwd": cwd,
                 "files_changed": files_changed or [],
                 "embedding": embedding,
                 "embed_text": embed_text,

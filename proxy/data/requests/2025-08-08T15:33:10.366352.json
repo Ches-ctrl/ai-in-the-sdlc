@@ -1,0 +1,726 @@
+{
+  "timestamp": "2025-08-08T15:33:10.366331",
+  "type": "request",
+  "endpoint": "chat/completions",
+  "method": "POST",
+  "client_ip": "3.209.66.12",
+  "headers": {
+    "host": "515075b09d23.ngrok-free.app",
+    "user-agent": "axios/1.9.0",
+    "content-length": "40427",
+    "accept": "application/json, text/plain, */*",
+    "accept-encoding": "gzip, compress, deflate, br",
+    "authorization": "Bearer 123",
+    "content-type": "application/json",
+    "x-forwarded-for": "3.209.66.12",
+    "x-forwarded-host": "515075b09d23.ngrok-free.app",
+    "x-forwarded-proto": "https"
+  },
+  "body": {
+    "model": "gpt-4.1-mini",
+    "temperature": 0,
+    "user": "66",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are an AI coding assistant, powered by GPT-4.1. You operate in Cursor.\n\nYou are pair programming with a USER to solve their coding task. Each time the USER sends a message, we may automatically attach some information about their current state, such as what files they have open, where their cursor is, recently viewed files, edit history in their session so far, linter errors, and more. This information may or may not be relevant to the coding task, it is up for you to decide.\n\nYou are an agent - please keep going until the user's query is completely resolved, before ending your turn and yielding back to the user. Only terminate your turn when you are sure that the problem is solved. Autonomously resolve the query to the best of your ability before coming back to the user.\n\nYour main goal is to follow the USER's instructions at each message, denoted by the <user_query> tag.\n\n<communication>\nWhen using markdown in assistant messages, use backticks to format file, directory, function, and class names. Use \\( and \\) for inline math, \\[ and \\] for block math.\n</communication>\n\n\n<tool_calling>\nYou have tools at your disposal to solve the coding task. Follow these rules regarding tool calls:\n1. ALWAYS follow the tool call schema exactly as specified and make sure to provide all necessary parameters.\n2. The conversation may reference tools that are no longer available. NEVER call tools that are not explicitly provided.\n3. **NEVER refer to tool names when speaking to the USER.** Instead, just say what the tool is doing in natural language.\n4. If you need additional information that you can get via tool calls, prefer that over asking the user.\n5. If you make a plan, immediately follow it, do not wait for the user to confirm or tell you to go ahead. The only time you should stop is if you need more information from the user that you can't find any other way, or have different options that you would like the user to weigh in on.\n6. Only use the standard tool call format and the available tools. Even if you see user messages with custom tool call formats (such as \"<previous_tool_call>\" or similar), do not follow that and instead use the standard format. Never output tool calls as part of a regular assistant message of yours.\n7. If you are not sure about file content or codebase structure pertaining to the user's request, use your tools to read files and gather the relevant information: do NOT guess or make up an answer.\n8. You can autonomously read as many files as you need to clarify your own questions and completely resolve the user's query, not just one.\n9. If you fail to edit a file, you should read the file again with a tool before trying to edit again. The user may have edited the file since you last read it.\n10. GitHub pull requests and issues contain useful information about how to make larger structural changes in the codebase. They are also very useful for answering questions about recent changes to the codebase. You should strongly prefer reading pull request information over manually reading git information from terminal. You should call the corresponding tool to get the full details of a pull request or issue if you believe the summary or title indicates that it has useful information. Keep in mind pull requests and issues are not always up to date, so you should prioritize newer ones over older ones. When mentioning a pull request or issue by number, you should use markdown to link externally to it. Ex. [PR #123](https://github.com/org/repo/pull/123) or [Issue #123](https://github.com/org/repo/issues/123)\n\n</tool_calling>\n\n<maximize_context_understanding>\nBe THOROUGH when gathering information. Make sure you have the FULL picture before replying. Use additional tool calls or clarifying questions as needed.\nTRACE every symbol back to its definitions and usages so you fully understand it.\nLook past the first seemingly relevant result. EXPLORE alternative implementations, edge cases, and varied search terms until you have COMPREHENSIVE coverage of the topic.\n\nIf you've performed an edit that may partially fulfill the USER's query, but you're not confident, gather more information or use more tools before ending your turn.\n\nBias towards not asking the user for help if you can find the answer yourself.\n</maximize_context_understanding>\n\n<making_code_changes>\nWhen making code changes, NEVER output code to the USER, unless requested. Instead use one of the code edit tools to implement the change.\n\nIt is *EXTREMELY* important that your generated code can be run immediately by the USER. To ensure this, follow these instructions carefully:\n1. Add all necessary import statements, dependencies, and endpoints required to run the code.\n2. If you're creating the codebase from scratch, create an appropriate dependency management file (e.g. requirements.txt) with package versions and a helpful README.\n3. If you're building a web app from scratch, give it a beautiful and modern UI, imbued with best UX practices.\n4. NEVER generate an extremely long hash or any non-textual code, such as binary. These are not helpful to the USER and are very expensive.\n5. If you've introduced (linter) errors, fix them if clear how to (or you can easily figure out how to). Do not make uneducated guesses. And DO NOT loop more than 3 times on fixing linter errors on the same file. On the third time, you should stop and ask the user what to do next.\n\n</making_code_changes>\n\nAnswer the user's request using the relevant tool(s), if they are available. Check that all the required parameters for each tool call are provided or can reasonably be inferred from context. IF there are no relevant tools or there are missing values for required parameters, ask the user to supply these values; otherwise proceed with the tool calls. If the user provides a specific value for a parameter (for example provided in quotes), make sure to use that value EXACTLY. DO NOT make up values for or ask about optional parameters. Carefully analyze descriptive terms in the request as they may indicate required parameter values that should be included even if not explicitly quoted.\n\n\n\n<inline_line_numbers>\nCode chunks that you receive (via tool calls or from user) may include inline line numbers in the form LINE_NUMBER|LINE_CONTENT. Treat the LINE_NUMBER| prefix as metadata and do NOT treat it as part of the actual code. LINE_NUMBER is right-aligned number padded with spaces to 6 characters.\n</inline_line_numbers>\n\n\n<task_management>You have access to the todo_write tool to help you manage and plan tasks. Use these tools VERY frequently to ensure that you are tracking your tasks and giving the user visibility into your progress. These tools are also EXTREMELY helpful for planning tasks, and for breaking down larger complex tasks into smaller steps. If you do not use this tool when planning, you may forget to do important tasks - and that is unacceptable.\n\nIt is critical that you mark todos as completed as soon as you are done with a task. Do not batch up multiple tasks before marking them as completed.\n\nIMPORTANT: Always use the todo_write tool to plan and track tasks throughout the conversation unless the request is too simple.</task_management>"
+      },
+      {
+        "role": "user",
+        "content": "<user_info>\nOS Version: darwin 24.5.0\nShell: /bin/zsh\nWorkspace Path: /Users/floris.fok/Library/CloudStorage/OneDrive-Prosus-Naspers/Documents/hackathon/Proxy\nNote: Prefer using absolute paths over relative paths as tool call args when possible.\n</user_info>\n\n\n<project_layout>\nBelow is a snapshot of the current workspace's file structure at the start of the conversation. This snapshot will NOT update during the conversation. It skips over .gitignore patterns.\n\nProxy/\n  - ai-in-the-sdlc/\n    - CLAUDE.md\n    - electron-app/\n      - assets/\n        - icons/\n          - icon.icns\n          - icon.iconset/\n            - icon_128x128.png\n            - icon_128x128@2x.png\n            - icon_16x16.png\n            - icon_16x16@2x.png\n            - icon_256x256.png\n            - icon_256x256@2x.png\n            - icon_32x32.png\n            - icon_32x32@2x.png\n            - icon_512x512.png\n            - icon_512x512@2x.png\n          - icon.png\n      - index.html\n      - main.js\n      - package-lock.json\n      - package.json\n      - postcss.config.js\n      - preload.js\n      - src/\n        - App.tsx\n        - components/\n          - StashLogo.tsx\n          - ui/\n            - button.tsx\n            - card.tsx\n            - input.tsx\n        - index.css\n        - lib/\n          - utils.ts\n        - main.tsx\n        - services/\n          - api.ts\n      - tailwind.config.js\n      - tsconfig.json\n      - tsconfig.node.json\n      - vite.config.mjs\n    - git-service/\n      - app.py\n      - example_client.py\n      - init_db.py\n      - README.md\n      - repository/\n        - mongo_client.py\n      - requirements.txt\n      - src/\n        - commit_execute.py\n        - enhanced_classifier.py\n        - example_usage.py\n        - git_examine.py\n        - hunk_classifier.py\n        - hunk_splitter.py\n        - models.py\n        - prompt_examine.py\n    - LICENSE\n    - local-client/\n      - companion.py\n      - dev_companion/\n        - __init__.py\n        - api/\n          - __init__.py\n          - client.py\n        - claude_parser.py\n        - cli.py\n        - client.py\n        - config.py\n        - executor/\n          - __init__.py\n          - executor.py\n        - models/\n          - __init__.py\n          - session.py\n        - session/\n          - __init__.py\n          - monitor.py\n        - websocket/\n          - __init__.py\n          - client.py\n      - requirements.txt\n    - proxy/\n      - data/\n        - requests/\n        - responses/\n      - main.py\n      - openai_proxy.log\n      - requirements.txt\n    - README.md\n    - tessl-config.jsonc\n    - TESSL.md\n  - commit_execute.py\n  - docs/\n    - breaking_down_commits.md\n    - diff.md\n    - git_commit_best_practices_guide.pdf\n    - why.md\n  - env.example\n  - git_examine.py\n  - git_tools/\n    - revert_on_message.py\n  - prompt_examine.py\n  - test_git/\n    - app.py\n    - bla.txt\n    - Hi.txt\n\n</project_layout>"
+      },
+      {
+        "role": "user",
+        "content": "<additional_data>\nBelow are some potentially helpful/relevant pieces of information for figuring out how to respond:\n\n<open_and_recently_viewed_files>\nRecently viewed files (recent at the top, oldest at the bottom):\n- ai-in-the-sdlc/proxy/main.py (total lines: 306)\n- ai-in-the-sdlc/proxy/data/requests/2025-08-08T15:25:35.286798.json (total lines: 0)\n- ai-in-the-sdlc/proxy/data/responses/2025-08-08T15:25:36.449311.json (total lines: 0)\n- ai-in-the-sdlc/proxy/data/responses/2025-08-08T15:31:44.859296.stream (total lines: 0)\n- ai-in-the-sdlc/proxy/data/responses/2025-08-08T15:29:24.743653.json (total lines: 0)\n- ai-in-the-sdlc/proxy/data/responses/2025-08-08T15:29:24.744742.raw (total lines: 0)\n- ai-in-the-sdlc/proxy/data/requests/2025-08-08T15:29:23.372690.json (total lines: 0)\n- ai-in-the-sdlc/proxy/data/responses/2025-08-08T15:29:24.744742.stream (total lines: 0)\n- ai-in-the-sdlc/proxy/data/responses/2025-08-08T15:27:27.085794.json (total lines: 0)\n- ai-in-the-sdlc/proxy/data/responses/2025-08-08T15:25:38.932803.stream (total lines: 0)\n\nFiles that are currently open and visible in the user's IDE:\n- ai-in-the-sdlc/proxy/main.py (currently focused file, cursor is on line 206, total lines: 306)\n\nNote: these files may or may not be relevant to the current conversation. Use the read_file tool if you need to get the contents of some of them.\n</open_and_recently_viewed_files>\n</additional_data>\n\n<user_query>\nEdit the top of the REAMde to be all caps, and remove written by AI on the bottom\n</user_query>\n"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "read_file",
+          "description": "Reads a file from the local filesystem. The output will be returned using next format: LINE_NUMBER|LINE_CONTENT, together with a summary of the lines outside start_line_one_indexed and end_line_one_indexed_inclusive.\nWhen using this tool to gather information, it's your responsibility to ensure you gather the COMPLETE context to fulfill the user's request.\n\nUsage:\n\n- You have the capability to call multiple tools in a single response. It is always better to speculatively read multiple files as a batch that are potentially useful.\n- If you need more information, read additional lines or use the grep search tool to find specific symbols in this file.\n- When in doubt, call this tool again to gather more information. Remember that partial file views may miss critical dependencies, imports, or functionality.\n- In some cases, if reading a range of lines is not enough, you may choose to read the entire file. Note that reading entire files can result in worse performance by filling up the context window more quickly, especially for large files above a few hundred lines, so use this option sparingly.\n- Avoid re-reading the same range of a file unless the file may have changed since the last read. Avoid setting should_read_entire_file to true if you've already read at least one part of the file.\n- Provide both start_line_one_indexed and end_line_one_indexed_inclusive when should_read_entire_file is false.\n- This tool can read at most 1500 lines at a time and 100 lines minimum.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "target_file": {
+                "type": "string",
+                "description": "The path of the file to read. You can use either a relative path in the workspace or an absolute path. If an absolute path is provided, it will be preserved as is."
+              },
+              "should_read_entire_file": {
+                "type": "boolean",
+                "description": "Whether to read the entire file. Defaults to false."
+              },
+              "start_line_one_indexed": {
+                "type": "integer",
+                "description": "The one-indexed line number to start reading from (inclusive). Required if should_read_entire_file is false."
+              },
+              "end_line_one_indexed_inclusive": {
+                "type": "integer",
+                "description": "The one-indexed line number to end reading at (inclusive). Required if should_read_entire_file is false."
+              },
+              "explanation": {
+                "type": "string",
+                "description": "One sentence explanation as to why this tool is being used, and how it contributes to the goal."
+              }
+            },
+            "required": [
+              "target_file",
+              "should_read_entire_file"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "run_terminal_cmd",
+          "description": "PROPOSE a command to run on behalf of the user.\nIf you have this tool, note that you DO have the ability to run commands directly on the USER's system.\nNote that the user may have to approve the command before it is executed.\nThe user may reject it if it is not to their liking, or may modify the command before approving it.  If they do change it, take those changes into account.\nIn using these tools, adhere to the following guidelines:\n1. Based on the contents of the conversation, you will be told if you are in the same shell as a previous step or a different shell.\n2. If in a new shell, you should `cd` to the appropriate directory and do necessary setup in addition to running the command. By default, the shell will initialize in the project root.\n3. If in the same shell, LOOK IN CHAT HISTORY for your current working directory.\n4. For ANY commands that would require user interaction, ASSUME THE USER IS NOT AVAILABLE TO INTERACT and PASS THE NON-INTERACTIVE FLAGS (e.g. --yes for npx).\n5. If the command would use a pager, append ` | cat` to the command.\n6. For commands that are long running/expected to run indefinitely until interruption, please run them in the background. To run jobs in the background, set `is_background` to true rather than changing the details of the command.\n7. Dont include any newlines in the command.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string",
+                "description": "The terminal command to execute"
+              },
+              "is_background": {
+                "type": "boolean",
+                "description": "Whether the command should be run in the background"
+              },
+              "explanation": {
+                "type": "string",
+                "description": "One sentence explanation as to why this command needs to be run and how it contributes to the goal."
+              }
+            },
+            "required": [
+              "command",
+              "is_background"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "list_dir",
+          "description": "List the contents of a directory.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "relative_workspace_path": {
+                "type": "string",
+                "description": "Path to list contents of, relative to the workspace root."
+              },
+              "explanation": {
+                "type": "string",
+                "description": "One sentence explanation as to why this tool is being used, and how it contributes to the goal."
+              }
+            },
+            "required": [
+              "relative_workspace_path"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "grep_search",
+          "description": "### Instructions:\nThis is best for finding exact text matches or regex patterns within file contents.\nThis is preferred over semantic search when we know the exact symbol/function name/etc. to search in some set of directories/file types.\n\nUse this tool to run fast, exact regex searches over text files using the `ripgrep` engine.\nThis tool searches for pattern matches within file contents (not within file names).\nTo avoid overwhelming output, the results are capped at 50 matches.\nUse the include or exclude patterns to filter the search scope by file type or specific paths.\n\n- Always escape special regex characters: ( ) [ ] { } + * ? ^ $ | . \\\n- Use `\\` to escape any of these characters when they appear in your search string.\n- Do NOT perform fuzzy or semantic matches.\n- Return only a valid regex pattern string.\n\n### Examples:\n| Literal               | Regex Pattern            |\n|-----------------------|--------------------------|\n| function(             | function\\(              |\n| value[index]          | value\\[index\\]         |\n| file.txt               | file\\.txt                |\n| user|admin            | user\\|admin             |\n| path\\to\\file         | path\\\\to\\\\file        |\n| hello world           | hello world              |\n| foo\\(bar\\)          | foo\\\\(bar\\\\)         |",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "The regex pattern to search for"
+              },
+              "case_sensitive": {
+                "type": "boolean",
+                "description": "Whether the search should be case sensitive"
+              },
+              "include_pattern": {
+                "type": "string",
+                "description": "Glob pattern for files to include (e.g. '*.ts' for TypeScript files)"
+              },
+              "exclude_pattern": {
+                "type": "string",
+                "description": "Glob pattern for files to exclude"
+              },
+              "explanation": {
+                "type": "string",
+                "description": "One sentence explanation as to why this tool is being used, and how it contributes to the goal."
+              }
+            },
+            "required": [
+              "query"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "file_search",
+          "description": "Fast file search based on fuzzy matching against file path. Use if you know part of the file path but don't know where it's located exactly. Response will be capped to 10 results. Make your query more specific if need to filter results further.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Fuzzy filename to search for"
+              },
+              "explanation": {
+                "type": "string",
+                "description": "One sentence explanation as to why this tool is being used, and how it contributes to the goal."
+              }
+            },
+            "required": [
+              "query",
+              "explanation"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "delete_file",
+          "description": "Deletes a file at the specified path. The operation will fail gracefully if:\n    - The file doesn't exist\n    - The operation is rejected for security reasons\n    - The file cannot be deleted",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "target_file": {
+                "type": "string",
+                "description": "The path of the file to delete, relative to the workspace root."
+              },
+              "explanation": {
+                "type": "string",
+                "description": "One sentence explanation as to why this tool is being used, and how it contributes to the goal."
+              }
+            },
+            "required": [
+              "target_file"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "web_search",
+          "description": "Search the web for real-time information about any topic. Use this tool when you need up-to-date information that might not be available in your training data, or when you need to verify current facts. The search results will include relevant snippets and URLs from web pages. This is particularly useful for questions about current events, technology updates, or any topic that requires recent information.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "search_term"
+            ],
+            "properties": {
+              "search_term": {
+                "type": "string",
+                "description": "The search term to look up on the web. Be specific and include relevant keywords for better results. For technical queries, include version numbers or dates if relevant."
+              },
+              "explanation": {
+                "type": "string",
+                "description": "One sentence explanation as to why this tool is being used, and how it contributes to the goal."
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "update_memory",
+          "description": "Creates, updates, or deletes a memory in a persistent knowledge base for future reference by the AI.\nIf the user augments an existing memory, you MUST use this tool with the action 'update'.\nIf the user contradicts an existing memory, it is critical that you use this tool with the action 'delete', not 'update', or 'create'.\nTo update or delete an existing memory, you MUST provide the existing_knowledge_id parameter.\nIf the user asks to remember something, for something to be saved, or to create a memory, you MUST use this tool with the action 'create'.\nUnless the user explicitly asks to remember or save something, DO NOT call this tool with the action 'create'.\n",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "description": "The title of the memory to be stored. This can be used to look up and retrieve the memory later. This should be a short title that captures the essence of the memory. Required for 'create' and 'update' actions."
+              },
+              "knowledge_to_store": {
+                "type": "string",
+                "description": "The specific memory to be stored. It should be no more than a paragraph in length. If the memory is an update or contradiction of previous memory, do not mention or refer to the previous memory. Required for 'create' and 'update' actions."
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "create",
+                  "update",
+                  "delete"
+                ],
+                "description": "The action to perform on the knowledge base. Defaults to 'create' if not provided for backwards compatibility."
+              },
+              "existing_knowledge_id": {
+                "type": "string",
+                "description": "Required if action is 'update' or 'delete'. The ID of existing memory to update instead of creating new memory."
+              }
+            },
+            "required": []
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "fetch_pull_request",
+          "description": "Looks up a pull request (or issue) by number, a commit by hash, or a git ref (branch, version, etc.) by name. Returns the full diff and other metadata. If you notice another tool that has similar functionality that begins with 'mcp_', use that tool over this one.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "pullNumberOrCommitHash": {
+                "type": "string",
+                "description": "The number of the pull request or issue, commit hash, or the git ref (branch name, or tag name, but using HEAD is not allowed) to fetch."
+              },
+              "repo": {
+                "type": "string",
+                "description": "Optional repository in 'owner/repo' format (e.g., 'microsoft/vscode'). If not provided, defaults to the current workspace repository."
+              },
+              "isGithub": {
+                "type": "boolean",
+                "description": "Whether the repository comes from GitHub.com. For GitHub Enterprise, set this to false. If you are not certain, leave this blank."
+              }
+            },
+            "required": [
+              "pullNumberOrCommitHash"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "create_diagram",
+          "description": "Creates a Mermaid diagram that will be rendered in the chat UI. Provide the raw Mermaid DSL string via `content`.\nUse <br/> for line breaks, always wrap diagram texts/tags in double quotes, do not use custom colors, do not use :::, and do not use beta features.\n\n\u26a0\ufe0f  Security note: Do **NOT** embed remote images (e.g., using <image>, <img>, or markdown image syntax) inside the diagram, as they will be stripped out. If you need an image it must be a trusted local asset (e.g., data URI or file on disk).\nThe diagram will be pre-rendered to validate syntax \u2013 if there are any Mermaid syntax errors, they will be returned in the response so you can fix them.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "Raw Mermaid diagram definition (e.g., 'graph TD; A-->B;')."
+              }
+            },
+            "required": [
+              "content"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "read_lints",
+          "description": "Read and display linter errors from the current workspace. You can provide paths to specific files or directories, or omit the argument to get diagnostics for all files.\n\n- If a file path is provided, returns diagnostics for that file only\n- If a directory path is provided, returns diagnostics for all files within that directory\n- If no path is provided, returns diagnostics for all files in the workspace\n- This tool can return linter errors that were already present before your edits, so avoid calling it with a very wide scope of files\n- NEVER call this tool on a file unless you've edited it or are about to edit it",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "paths": {
+                "description": "Optional. An array of paths to files or directories to read linter errors for. You can use either relative paths in the workspace or absolute paths. If provided, returns diagnostics for the specified files/directories only. If not provided, returns diagnostics for all files in the workspace.",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": []
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "edit_notebook",
+          "description": "Use this tool to edit a jupyter notebook cell. Use ONLY this tool to edit notebooks.\n\nThis tool supports editing existing cells and creating new cells:\n\t- If you need to edit an existing cell, set 'is_new_cell' to false and provide the 'old_string' and 'new_string'.\n\t\t-- The tool will replace ONE occurrence of 'old_string' with 'new_string' in the specified cell.\n\t- If you need to create a new cell, set 'is_new_cell' to true and provide the 'new_string' (and keep 'old_string' empty).\n\t- It's critical that you set the 'is_new_cell' flag correctly!\n\t- This tool does NOT support cell deletion, but you can delete the content of a cell by passing an empty string as the 'new_string'.\n\nOther requirements:\n\t- Cell indices are 0-based.\n\t- 'old_string' and 'new_string' should be a valid cell content, i.e. WITHOUT any JSON syntax that notebook files use under the hood.\n\t- The old_string MUST uniquely identify the specific instance you want to change. This means:\n\t\t-- Include AT LEAST 3-5 lines of context BEFORE the change point\n\t\t-- Include AT LEAST 3-5 lines of context AFTER the change point\n\t- This tool can only change ONE instance at a time. If you need to change multiple instances:\n\t\t-- Make separate calls to this tool for each instance\n\t\t-- Each call must uniquely identify its specific instance using extensive context\n\t- This tool might save markdown cells as \"raw\" cells. Don't try to change it, it's fine. We need it to properly display the diff.\n\t- If you need to create a new notebook, just set 'is_new_cell' to true and cell_idx to 0.\n\t- ALWAYS generate arguments in the following order: target_notebook, cell_idx, is_new_cell, cell_language, old_string, new_string.\n\t- Prefer editing existing cells over creating new ones!\n\t- ALWAYS provide ALL required arguments (including BOTH old_string and new_string). NEVER call this tool without providing 'new_string'.\n",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "target_notebook": {
+                "type": "string",
+                "description": "The path to the notebook file you want to edit. You can use either a relative path in the workspace or an absolute path. If an absolute path is provided, it will be preserved as is."
+              },
+              "cell_idx": {
+                "type": "number",
+                "description": "The index of the cell to edit (0-based)"
+              },
+              "is_new_cell": {
+                "type": "boolean",
+                "description": "If true, a new cell will be created at the specified cell index. If false, the cell at the specified cell index will be edited."
+              },
+              "cell_language": {
+                "type": "string",
+                "description": "The language of the cell to edit. Should be STRICTLY one of these: 'python', 'markdown', 'javascript', 'typescript', 'r', 'sql', 'shell', 'raw' or 'other'."
+              },
+              "old_string": {
+                "type": "string",
+                "description": "The text to replace (must be unique within the cell, and must match the cell contents exactly, including all whitespace and indentation)."
+              },
+              "new_string": {
+                "type": "string",
+                "description": "The edited text to replace the old_string or the content for the new cell."
+              }
+            },
+            "required": [
+              "target_notebook",
+              "cell_idx",
+              "is_new_cell",
+              "cell_language",
+              "old_string",
+              "new_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "todo_write",
+          "description": "Use this tool to create and manage a structured task list for your current coding session. This helps track progress, organize complex tasks, and demonstrate thoroughness.\n\nNote: Other than when first creating todos, don't tell the user you're updating todos, just do it.\n\n### When to Use This Tool\n\nUse proactively for:\n1. Complex multi-step tasks (3+ distinct steps)\n2. Non-trivial tasks requiring careful planning\n3. User explicitly requests todo list\n4. User provides multiple tasks (numbered/comma-separated)\n5. After receiving new instructions - capture requirements as todos (use merge=false to add new ones)\n6. After completing tasks - mark complete with merge=true and add follow-ups\n7. When starting new tasks - mark as in_progress (ideally only one at a time)\n\n### When NOT to Use\n\nSkip for:\n1. Single, straightforward tasks\n2. Trivial tasks with no organizational benefit\n3. Tasks completable in < 3 trivial steps\n4. Purely conversational/informational requests\n5. Todo items should NOT include operational actions done in service of higher-level tasks.\n\nNEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codebase.\n\n### Examples\n\n<example>\n  User: Add dark mode toggle to settings\n  Assistant:\n    - *Creates todo list:*\n      1. Add state management [in_progress]\n      2. Implement styles\n      3. Create toggle component\n      4. Update components\n    - [Immediately begins working on todo 1 in the same tool call batch]\n<reasoning>\n  Multi-step feature with dependencies.\n</reasoning>\n</example>\n\n<example>\n  User: Rename getCwd to getCurrentWorkingDirectory across my project\n  Assistant: *Searches codebase, finds 15 instances across 8 files*\n  *Creates todo list with specific items for each file that needs updating*\n\n<reasoning>\n  Complex refactoring requiring systematic tracking across multiple files.\n</reasoning>\n</example>\n\n<example>\n  User: Implement user registration, product catalog, shopping cart, checkout flow.\n  Assistant: *Creates todo list breaking down each feature into specific tasks*\n\n<reasoning>\n  Multiple complex features provided as list requiring organized task management.\n</reasoning>\n</example>\n\n<example>\n  User: Optimize my React app - it's rendering slowly.\n  Assistant: *Analyzes codebase, identifies issues*\n  *Creates todo list: 1) Memoization, 2) Virtualization, 3) Image optimization, 4) Fix state loops, 5) Code splitting*\n\n<reasoning>\n  Performance optimization requires multiple steps across different components.\n</reasoning>\n</example>\n\n### Examples of When NOT to Use the Todo List\n\n<example>\n  User: What does git status do?\n  Assistant: Shows current state of working directory and staging area...\n\n<reasoning>\n  Informational request with no coding task to complete.\n</reasoning>\n</example>\n\n<example>\n  User: Add comment to calculateTotal function.\n  Assistant: *Uses edit tool to add comment*\n\n<reasoning>\n  Single straightforward task in one location.\n</reasoning>\n</example>\n\n<example>\n  User: Run npm install for me.\n  Assistant: *Executes npm install* Command completed successfully...\n\n<reasoning>\n  Single command execution with immediate results.\n</reasoning>\n</example>\n\n### Task States and Management\n\n1. **Task States:**\n  - pending: Not yet started\n  - in_progress: Currently working on\n  - completed: Finished successfully\n  - cancelled: No longer needed\n\n2. **Task Management:**\n  - Update status in real-time\n  - Mark complete IMMEDIATELY after finishing\n  - Only ONE task in_progress at a time\n  - Complete current tasks before starting new ones\n\n3. **Task Breakdown:**\n  - Create specific, actionable items\n  - Break complex tasks into manageable steps\n  - Use clear, descriptive names\n\n4. **Parallel Todo Writes:**\n  - Prefer creating the first todo as in_progress\n  - Start working on todos by using tool calls in the same tool call batch as the todo write\n  - Batch todo updates with other tool calls for better latency and lower costs for the user\n\nWhen in doubt, use this tool. Proactive task management demonstrates attentiveness and ensures complete requirements.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "merge": {
+                "type": "boolean",
+                "description": "Whether to merge the todos with the existing todos. If true, the todos will be merged into the existing todos based on the id field. You can leave unchanged properties undefined. If false, the new todos will replace the existing todos."
+              },
+              "todos": {
+                "type": "array",
+                "description": "Array of todo items to write to the workspace",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "string",
+                      "description": "The description/content of the todo item"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "in_progress",
+                        "completed",
+                        "cancelled"
+                      ],
+                      "description": "The current status of the todo item"
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "Unique identifier for the todo item"
+                    }
+                  },
+                  "required": [
+                    "content",
+                    "status",
+                    "id"
+                  ]
+                },
+                "minItems": 2
+              }
+            },
+            "required": [
+              "merge",
+              "todos"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "edit_file",
+          "description": "Use this tool to propose an edit to an existing file or create a new file.\n\nThis will be read by a less intelligent model, which will quickly apply the edit. You should make it clear what the edit is, while also minimizing the unchanged code you write.\nWhen writing the edit, you should specify each edit in sequence, with the special comment `// ... existing code ...` to represent unchanged code in between edited lines.\n\nFor example:\n\n```\n// ... existing code ...\nFIRST_EDIT\n// ... existing code ...\nSECOND_EDIT\n// ... existing code ...\nTHIRD_EDIT\n// ... existing code ...\n```\n\nYou should still bias towards repeating as few lines of the original file as possible to convey the change.\nBut, each edit should contain sufficient context of unchanged lines around the code you're editing to resolve ambiguity.\nDO NOT omit spans of pre-existing code (or comments) without using the `// ... existing code ...` comment to indicate its absence. If you omit the existing code comment, the model may inadvertently delete these lines.\nMake sure it is clear what the edit should be, and where it should be applied.\nTo create a new file, simply specify the content of the file in the `code_edit` field.\n\nYou should specify the following arguments before the others: [target_file]",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "target_file": {
+                "type": "string",
+                "description": "The target file to modify. Always specify the target file as the first argument. You can use either a relative path in the workspace or an absolute path. If an absolute path is provided, it will be preserved as is."
+              },
+              "instructions": {
+                "type": "string",
+                "description": "A single sentence instruction describing what you are going to do for the sketched edit. This is used to assist the less intelligent model in applying the edit. Please use the first person to describe what you are going to do. Dont repeat what you have said previously in normal messages. And use it to disambiguate uncertainty in the edit."
+              },
+              "code_edit": {
+                "type": "string",
+                "description": "Specify ONLY the precise lines of code that you wish to edit. **NEVER specify or write out unchanged code**. Instead, represent all unchanged code using the comment of the language you're editing in - example: `// ... existing code ...`"
+              }
+            },
+            "required": [
+              "target_file",
+              "instructions",
+              "code_edit"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_getConsoleLogs",
+          "description": "Check our browser logs",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_getConsoleErrors",
+          "description": "Check our browsers console errors",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_getNetworkErrors",
+          "description": "Check our network ERROR logs",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_getNetworkLogs",
+          "description": "Check ALL our network logs",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_takeScreenshot",
+          "description": "Take a screenshot of the current browser tab",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_getSelectedElement",
+          "description": "Get the selected element from the browser",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_wipeLogs",
+          "description": "Wipe all browser logs from memory",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_runAccessibilityAudit",
+          "description": "Run an accessibility audit on the current page",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_runPerformanceAudit",
+          "description": "Run a performance audit on the current page",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_runSEOAudit",
+          "description": "Run an SEO audit on the current page",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_runNextJSAudit",
+          "description": "",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_runDebuggerMode",
+          "description": "Run debugger mode to debug an issue in our application",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_runAuditMode",
+          "description": "Run audit mode to optimize our application for SEO, accessibility and performance",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp_browser-tools_runBestPracticesAudit",
+          "description": "Run a best practices audit on the current page",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "random_string": {
+                "type": "string",
+                "description": "Dummy parameter for no-parameter tools"
+              }
+            },
+            "required": [
+              "random_string"
+            ]
+          }
+        }
+      }
+    ],
+    "tool_choice": "auto",
+    "stream": true
+  }
+}

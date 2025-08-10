@@ -5,6 +5,7 @@ from datetime import datetime
 # Minimalistic Models
 class SessionStartRequest(BaseModel):
     user_prompt: str
+    cwd: str
 
 class SessionStartResponse(BaseModel):
     message: str
@@ -14,6 +15,7 @@ class SessionEndRequest(BaseModel):
     session_id: str
     final_output: str
     status: str
+    cwd: str
     metadata: Optional[Dict[str, Any]] = None
 
 class SessionEndResponse(BaseModel):
@@ -25,8 +27,9 @@ class SessionInfo(BaseModel):
     session_id: str
     timestamp: datetime
     git_commit_hash: str
+    cwd: str
     session_end_request: Optional[SessionEndRequest] = None
-    features: List[str]
+    features: List[str] =[]
 
 class SessionEndInfo(BaseModel):
     session_id: str

@@ -1,0 +1,39 @@
+{
+  "name": "git-watcher-app",
+  "version": "1.0.0",
+  "description": "Desktop app for watching folders and automatically executing git commands",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never"
+  },
+  "keywords": ["electron", "git", "watcher", "automation"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.14.0",
+    "chokidar": "^3.5.3",
+    "axios": "^1.6.0"
+  },
+  "build": {
+    "appId": "com.example.git-watcher",
+    "productName": "Git Watcher",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/**/*",
+      "node_modules/ws/**/*",
+      "node_modules/chokidar/**/*",
+      "node_modules/axios/**/*"
+    ]
+  }
+}
+

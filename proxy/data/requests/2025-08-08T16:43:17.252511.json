@@ -1,0 +1,44 @@
+{
+  "timestamp": "2025-08-08T16:43:17.252413",
+  "type": "request",
+  "endpoint": "chat/completions",
+  "method": "POST",
+  "client_ip": "2a02:6b6f:e521:b600:39:173b:9f23:fe35",
+  "headers": {
+    "host": "e3c96f94d3f3.ngrok-free.app",
+    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/1.3.9 Chrome/132.0.6834.210 Electron/34.5.1 Safari/537.36",
+    "content-length": "196",
+    "accept": "*/*",
+    "accept-encoding": "gzip, deflate, br, zstd",
+    "accept-language": "en-GB",
+    "authorization": "Bearer 123",
+    "content-type": "application/json",
+    "origin": "vscode-file://vscode-app",
+    "priority": "u=1, i",
+    "sec-ch-ua": "\"Not A(Brand\";v=\"8\", \"Chromium\";v=\"132\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": "\"macOS\"",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "cross-site",
+    "x-forwarded-for": "2a02:6b6f:e521:b600:39:173b:9f23:fe35",
+    "x-forwarded-host": "e3c96f94d3f3.ngrok-free.app",
+    "x-forwarded-proto": "https"
+  },
+  "body": {
+    "model": "gpt-4.1-mini",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Test prompt using gpt-3.5-turbo"
+      }
+    ],
+    "temperature": 1,
+    "stream": false,
+    "max_completion_tokens": 10
+  }
+}

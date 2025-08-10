@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a hackathon project exploring AI integration in the Software Development Lifecycle (SDLC). The project consists of two main components:
 
-1. **Electron App** (`/electron-app`): A Git observability desktop application built with React, TypeScript, Tailwind CSS, and shadcn/ui
-2. **Git Service** (`/git-service`): A FastAPI backend service for executing git commands via WebSocket
+1. **Electron App** (`/electron-app`): A Git observability desktop application built with React, TypeScript, Tailwind CSS, and shadcn/ui.
+2. **Git Service** (`/git-service`): A FastAPI backend service for executing git commands via WebSocket.
 
 ## Development Commands
 
@@ -15,11 +15,11 @@ This is a hackathon project exploring AI integration in the Software Development
 ```bash
 cd electron-app
 npm install              # Install dependencies
-npm start               # Start development (runs Vite + Electron)
-npm run dev             # Start Vite development server only
-npm run build           # Build for production
-npm run dist            # Build and package application
-npm run dist:mac        # Build Mac-specific package
+npm start                # Start development (runs Vite + Electron)
+npm run dev              # Start Vite development server only
+npm run build            # Build for production
+npm run dist             # Build and package application
+npm run dist:mac         # Build Mac-specific package
 ```
 
 ### Git Service

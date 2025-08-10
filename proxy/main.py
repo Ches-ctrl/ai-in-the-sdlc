@@ -67,7 +67,7 @@ class RequestLogger:
             "headers": dict(headers),
             "body": body
         }
-        logger.info(f"REQUEST: {json.dumps(log_data, indent=2)[:100]}")
+        # logger.info(f"REQUEST: {json.dumps(log_data, indent=2)[:100]}")
 
         with open(f"data/requests/{datetime.utcnow().isoformat()}.json", "w") as f:
             f.write(json.dumps(log_data, indent=2))
@@ -85,12 +85,29 @@ class RequestLogger:
             "response_time_ms": round(response_time * 1000, 2),
             "response_body": response_body
         }
-        logger.info(f"RESPONSE: {json.dumps(log_data, indent=2)[:100]}")
+        # logger.info(f"RESPONSE: {json.dumps(log_data, indent=2)[:100]}")
 
         with open(f"data/responses/{datetime.utcnow().isoformat()}.json", "w") as f:
             f.write(json.dumps(log_data, indent=2))
 
         return log_data
+    
+    @staticmethod
+    def log_stream_response(response_body: Any, timestamp: str):
+        """Log streaming response details"""
+
+        try:
+            data = json.loads(response_body.strip("data: ").strip())
+            if "choices" in data and data["choices"]:
+                if data["choices"][0]["finish_reason"]:
+                    print(f"\n\nFINISH REASON: {data['choices'][0]['finish_reason']}\n\n")
+        except json.JSONDecodeError:
+            pass
+
+        # Write raw SSE data without JSON wrapping to preserve streaming format
+        with open(f"data/responses/{timestamp}.stream", "a") as f:
+            f.write(response_body + "\n\n")
+        return response_body
 
 request_logger = RequestLogger()
 
@@ -114,6 +131,34 @@ async def proxy_request(request: Request, endpoint_path: str):
             request_data = json.loads(body.decode())
         except json.JSONDecodeError:
             request_data = body.decode()
+
+        if "max_tokens" in request_data:
+            request_data["max_completion_tokens"] = request_data["max_tokens"]
+            del request_data["max_tokens"]
+
+        if "model" in request_data:
+            request_data["model"] = "gpt-4.1-mini"
+
+
+        ## Detect user query
+        if "messages" in request_data:
+            def find_user_query(message: str):
+                if "<user_query>" in message:
+                    return message.split("<user_query>")[1].split("</user_query>")[0]
+                return None
+            
+            latest_user_message = [
+                find_user_query(i["content"]) for i in request_data["messages"] 
+                if i["role"] == "user" and find_user_query(i["content"])
+            ]
+
+            if latest_user_message:
+                latest_user_message_str = latest_user_message[-1].strip()
+                print(f"\n\nLATEST USER MESSAGE: {latest_user_message_str}\n\n")
+
+    
+    # Encode the changed request data
+    body = json.dumps(request_data).encode()
     
     # Log the incoming request
     request_log = request_logger.log_request(
@@ -149,8 +194,16 @@ async def proxy_request(request: Request, endpoint_path: str):
             # Handle streaming responses
             if response.headers.get("content-type", "").startswith("text/event-stream"):
                 async def stream_response():
+                    timestamp = datetime.utcnow().isoformat()
                     async for chunk in response.aiter_bytes():
-                        yield chunk
+                    
+                        for line in chunk.decode("utf-8").split("\n\n"):
+                            request_logger.log_stream_response(
+                                response_body=line,
+                                timestamp=timestamp
+                            )
+                            # Yield the raw chunk to maintain SSE format
+                            yield line.encode("utf-8") + b"\n\n"
                 
                 # Log streaming response start
                 request_logger.log_response(
@@ -204,10 +257,6 @@ async def chat_completions(request: Request):
     """Proxy for OpenAI chat completions"""
     return await proxy_request(request, "chat/completions")
 
-@app.api_route("/completions", methods=["POST"])
-async def completions(request: Request):
-    """Proxy for OpenAI completions"""
-    return await proxy_request(request, "completions")
 
 @app.api_route("/embeddings", methods=["POST"])
 async def embeddings(request: Request):
@@ -224,51 +273,6 @@ async def model_details(request: Request, model_id: str):
     """Proxy for OpenAI model details"""
     return await proxy_request(request, f"models/{model_id}")
 
-@app.api_route("/images/generations", methods=["POST"])
-async def image_generations(request: Request):
-    """Proxy for OpenAI image generations"""
-    return await proxy_request(request, "images/generations")
-
-@app.api_route("/images/edits", methods=["POST"])
-async def image_edits(request: Request):
-    """Proxy for OpenAI image edits"""
-    return await proxy_request(request, "images/edits")
-
-@app.api_route("/images/variations", methods=["POST"])
-async def image_variations(request: Request):
-    """Proxy for OpenAI image variations"""
-    return await proxy_request(request, "images/variations")
-
-@app.api_route("/audio/transcriptions", methods=["POST"])
-async def audio_transcriptions(request: Request):
-    """Proxy for OpenAI audio transcriptions"""
-    return await proxy_request(request, "audio/transcriptions")
-
-@app.api_route("/audio/translations", methods=["POST"])
-async def audio_translations(request: Request):
-    """Proxy for OpenAI audio translations"""
-    return await proxy_request(request, "audio/translations")
-
-@app.api_route("/files", methods=["GET", "POST"])
-async def files(request: Request):
-    """Proxy for OpenAI files"""
-    return await proxy_request(request, "files")
-
-@app.api_route("/files/{file_id}", methods=["GET", "DELETE"])
-async def file_operations(request: Request, file_id: str):
-    """Proxy for OpenAI file operations"""
-    return await proxy_request(request, f"files/{file_id}")
-
-@app.api_route("/fine-tuning/jobs", methods=["GET", "POST"])
-async def fine_tuning_jobs(request: Request):
-    """Proxy for OpenAI fine-tuning jobs"""
-    return await proxy_request(request, "fine-tuning/jobs")
-
-@app.api_route("/fine-tuning/jobs/{job_id}", methods=["GET"])
-async def fine_tuning_job_details(request: Request, job_id: str):
-    """Proxy for OpenAI fine-tuning job details"""
-    return await proxy_request(request, f"fine-tuning/jobs/{job_id}")
-
 # Health check and status endpoints
 @app.get("/health")
 async def health_check():
@@ -284,20 +288,16 @@ async def root():
         "description": "A proxy server for OpenAI API calls with logging and monitoring",
         "endpoints": {
             "chat": "/chat/completions",
-            "completions": "/completions",
             "embeddings": "/embeddings",
             "models": "/models",
-            "images": "/images/*",
-            "audio": "/audio/*",
-            "files": "/files/*",
-            "fine-tuning": "/fine-tuning/*"
         },
-        "health": "/health"
+        "health": "/health",
+        "made_by": "Made by AI"
     }
 
 if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 8001))
     
     logger.info(f"Starting OpenAI API Proxy on {host}:{port}")
     uvicorn.run(app, host=host, port=port)

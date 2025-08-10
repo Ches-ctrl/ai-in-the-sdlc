@@ -1,6 +1,6 @@
-# AI in the SDLC
+# AI IN THE SDLC
 
-A hackathon project exploring AI integration in the Software Development Lifecycle.
+A HACKATHON PROJECT EXPLORING AI INTEGRATION IN THE SOFTWARE DEVELOPMENT LIFECYCLE.
 
 ## Structure
 
@@ -71,3 +71,5 @@ curl -X POST "https://api.example.com/v1/session/end" \
 - Clean Electron app with React + Tailwind + shadcn/ui
 - Git repository observability interface
 - Modern dark theme design
+
+---
