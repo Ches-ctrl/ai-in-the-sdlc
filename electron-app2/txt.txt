@@ -1,0 +1,4 @@
+- Show cwd
+- Connect to Mongo
+- Set up Auth
+- Set up pricing

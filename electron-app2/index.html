@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Git Watcher</title>
+    <title>GitDaddy</title>
     <style>
         * {
             margin: 0;
@@ -13,61 +13,39 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+            background: white;
             height: 100vh;
             display: flex;
             flex-direction: column;
         }
-
-        .header {
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .status-bar {
-            background: #34495e;
-            color: white;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
         .status-indicator {
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: #95a5a6;
+            /* background: white; */
+            border: 1px solid black;
         }
 
         .status-indicator.started {
-            background: #f39c12;
+            background: #3b82f6; /* Blue for started */
         }
 
         .status-indicator.processing {
-            background: #3498db;
+            background: #f59e0b; /* Orange for processing */
             animation: pulse 1.5s infinite;
         }
 
         .status-indicator.done {
-            background: #27ae60;
+            background: #10b981; /* Green for done */
         }
 
         .status-indicator.error {
-            background: #e74c3c;
+            background: #ef4444; /* Red for error */
+            border: 1px solid black;
+        }
+
+        .status-indicator.stopped {
+            background: #6b7280; /* Gray for stopped */
         }
 
         @keyframes pulse {
@@ -79,31 +57,139 @@
         .main-content {
             flex: 1;
             display: flex;
+            flex-direction: row;
+            height: 100vh; /* No status bar anymore */
+        }
+
+        .sidebar {
+            width: 30%;
+            background: white;
+            border-right: 1px solid #000;
+            display: flex;
             flex-direction: column;
             padding: 20px;
-            gap: 20px;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #000;
+        }
+
+        .sidebar-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            /* margin-bottom: 20px; */
+            /* padding: 10px; */
+            /* background: white; */
+            /* border: 1px solid #000; */
+            font-size: 12px;
+            color: black;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+            color: black;
+        }
+
+        .sidebar-logo svg {
+            height: 32px;
+        }
+
+        .sidebar-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: black;
+            margin: 0;
+        }
+
+        .right-column {
+            width: 70%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 0;
+        }
+
+        .activity-section {
+            flex: 1;
+            padding: 20px 0;
+            border-bottom: 1px solid #000;
+            overflow-y: auto;
+        }
+
+        .activity-section h3 {
+            margin: 0 0 20px 0;
+            color: black;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid #000;
+            padding-bottom: 10px;
+        }
+
+        .info-card p {
+            line-height: 1.6;
+            color: black;
+            margin-bottom: 15px;
+        }
+
+        .details-toggle {
+            background: white;
+            border: 1px solid black;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            color: black;
+            transition: background-color 0.2s;
+        }
+
+        .details-toggle:hover {
+            background: black;
+            color: white;
+        }
+
+        .details-content {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid black;
+            font-size: 12px;
+            color: black;
+            line-height: 1.5;
+            display: none;
+        }
+
+        .details-content.open {
+            display: block;
         }
 
         .controls {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: transparent;
+            padding: 0;
         }
 
         .folder-selection {
             display: flex;
+            flex-direction: column;
             gap: 10px;
-            align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 0;
+        }
+
+        .folder-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .folder-path {
             flex: 1;
             padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: #f8f9fa;
+            border: 1px solid black;
+            background: white;
             font-family: monospace;
             font-size: 12px;
         }
@@ -118,165 +204,743 @@
         }
 
         .btn-primary {
-            background: #3498db;
+            background: black;
             color: white;
+            border: 1px solid black;
         }
 
         .btn-primary:hover {
-            background: #2980b9;
+            background: white;
+            color: black;
         }
 
         .btn-success {
-            background: #27ae60;
+            background: black;
             color: white;
+            border: 1px solid black;
         }
 
         .btn-success:hover {
-            background: #229954;
+            background: white;
+            color: black;
         }
 
         .btn-danger {
-            background: #e74c3c;
-            color: white;
+            background: white;
+            color: black;
+            border: 1px solid black;
         }
 
         .btn-danger:hover {
-            background: #c0392b;
+            background: black;
+            color: white;
         }
 
         .btn:disabled {
-            background: #95a5a6;
+            background: white;
+            color: black;
+            border: 1px solid black;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
         .folder-select {
             flex: 1;
             padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: #f8f9fa;
+            border: 1px solid black;
+            background: white;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 13px;
-            color: #2c3e50;
+            color: black;
         }
 
         .folder-select option.placeholder {
-            color: #7f8c8d;
+            color: black;
         }
 
-        .event-stream {
-            flex: 1;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .event-section {
+            padding: 20px 0;
             display: flex;
             flex-direction: column;
         }
 
         .event-stream-header {
-            background: #ecf0f1;
-            padding: 15px 20px;
-            border-radius: 8px 8px 0 0;
-            border-bottom: 1px solid #ddd;
+            padding: 0 0 15px 0;
+            border-bottom: 1px solid #000;
             font-weight: 600;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            color: black;
+            font-size: 18px;
         }
 
         .event-stream-content {
-            /* Fixed height to ensure a visible scroll area */
-            height: 40vh;
-            padding: 10px;
+            flex: 1;
+            padding: 0;
+            margin-top: 15px;
             overflow-y: auto;
             scroll-behavior: smooth;
             font-family: monospace;
             font-size: 12px;
             line-height: 1.4;
-            background: #2c3e50;
-            color: #ecf0f1;
-            border-radius: 0 0 8px 8px;
+            background: white;
+            color: black;
+            border: 1px solid #000;
+            width: 100%;
+            max-height: 200px;
+            height: 200px;
         }
 
         .log-entry {
             margin-bottom: 5px;
-            padding: 2px 0;
+            padding: 8px 12px;
+            color: black;
         }
 
-        .log-entry.error {
-            color: #e74c3c;
-        }
-
-        .log-entry.websocket {
-            color: #3498db;
-        }
-
-        .log-entry.status {
-            color: #f39c12;
+        .log-entry:before {
+            content: "> ";
+            color: black;
         }
 
         .timestamp {
-            color: #95a5a6;
+            color: black;
             margin-right: 10px;
         }
 
         .clear-logs {
-            position: absolute;
-            top: 10px;
+            position: relative;
+            margin-top: auto;
+            margin-bottom: auto;
             right: 10px;
-            background: #95a5a6;
-            color: white;
-            border: none;
+            background: white;
+            color: black;
+            border: 1px solid #000;
             padding: 5px 10px;
-            border-radius: 3px;
             cursor: pointer;
             font-size: 11px;
         }
 
         .clear-logs:hover {
-            background: #7f8c8d;
+            background: black;
+            color: white;
+        }
+
+        /* Prompt Dashboard Styles */
+        .prompt-group {
+            margin-bottom: 16px;
+            border-left: 1px solid black;
+            padding-left: 12px;
+        }
+
+        .prompt-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: black;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .commit-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .commit-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            background: white;
+            border: 1px solid black;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+            min-height: 28px;
+            margin-bottom: 2px;
+        }
+
+        .commit-item:hover {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            transform: translateX(2px);
+        }
+
+        .commit-hash {
+            font-family: monospace;
+            color: black;
+            font-weight: 600;
+            min-width: 60px;
+            flex-shrink: 0;
+        }
+
+        .commit-message {
+            color: black;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .commit-status {
+            font-size: 10px;
+            font-weight: 600;
+            flex-shrink: 0;
+            color: black;
+        }
+
+        /* Loading and No Commits States */
+        .loading-commits, .no-commits {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            color: #666;
+            font-size: 14px;
+            gap: 12px;
+        }
+
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #333;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-commits {
+            color: #999;
+        }
+
+        /* Commit Details Sidebar */
+        .commit-sidebar {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: white;
+            border-left: 2px solid black;
+            transition: right 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .commit-sidebar.open {
+            right: 0;
+        }
+
+        .commit-sidebar .sidebar-header {
+            background: white;
+            padding: 16px 20px;
+            border-bottom: 1px solid black;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .commit-sidebar .sidebar-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: black;
+        }
+
+        .close-btn {
+            background: none;
+            border: 1px solid black;
+            font-size: 20px;
+            cursor: pointer;
+            color: black;
+            padding: 4px 8px;
+            transition: background-color 0.2s;
+        }
+
+        .close-btn:hover {
+            background: black;
+            color: white;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+        }
+
+        .detail-section h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: black;
+            border-bottom: 1px solid black;
+            padding-bottom: 4px;
+        }
+
+        .detail-item {
+            display: flex;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: black;
+            min-width: 80px;
+            flex-shrink: 0;
+        }
+
+        .detail-value {
+            color: black;
+            word-break: break-all;
+        }
+
+        .detail-value.monospace {
+            font-family: monospace;
+            background: white;
+            border: 1px solid black;
+            padding: 2px 4px;
+        }
+
+        .file-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 0 0;
+        }
+
+        .file-list li {
+            background: white;
+            margin: 2px 0;
+            padding: 4px 8px;
+            border: 1px solid black;
+            font-family: monospace;
+            font-size: 11px;
+            color: black;
+        }
+
+        .file-list li.added {
+            border-left: 3px solid black;
+        }
+
+        .file-list li.modified {
+            border-left: 3px solid black;
+        }
+
+        .file-list li.deleted {
+            border-left: 3px solid black;
+        }
+
+        /* Connection Status Styles */
+        .connection-status {
+            margin-top: auto;
+            padding: 12px;
+            border-top: 1px solid black;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: black;
+        }
+
+        .connection-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444; /* Red for disconnected */
+            transition: background-color 0.3s ease;
+        }
+
+        .connection-indicator.connected {
+            background: #10b981; /* Green for connected */
+        }
+
+        .connection-text {
+            font-weight: 500;
+        }
+
+        /* CSS Variables for Theme */
+        :root {
+            --bg-color: white;
+            --text-color: black;
+            --border-color: black;
+            --hover-bg: black;
+            --hover-text: white;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: white;
+            --border-color: #404040;
+            --hover-bg: white;
+            --hover-text: black;
+        }
+
+        /* Night Mode Toggle Styles */
+        .night-mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-top: 1px solid var(--border-color);
+            margin-top: auto;
+            margin-bottom: 0;
+        }
+
+        /* Stream Events Toggle Styles */
+        .stream-events-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-top: 1px solid var(--border-color);
+            margin-bottom: 0;
+        }
+
+        /* Hidden state for event section */
+        .event-section.hidden {
+            display: none;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            transition: .3s;
+            border-radius: 12px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-color);
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--text-color);
+        }
+
+        input:checked + .slider:before {
+            background-color: var(--bg-color);
+            transform: translateX(20px);
+        }
+
+        .toggle-label {
+            font-size: 12px;
+            color: var(--text-color);
+            font-weight: 500;
+            user-select: none;
+        }
+
+        /* Dark Mode Theme Application */
+        [data-theme="dark"] body {
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .sidebar {
+            background: var(--bg-color);
+            border-right: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .sidebar-header {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .sidebar-title,
+        [data-theme="dark"] .sidebar-logo {
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .activity-section h3 {
+            color: var(--text-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .btn-primary {
+            background: var(--text-color);
+            color: var(--bg-color);
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .btn-primary:hover {
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .btn-success {
+            background: var(--text-color);
+            color: var(--bg-color);
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .btn-success:hover {
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .btn-danger {
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .btn-danger:hover {
+            background: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        [data-theme="dark"] .folder-select,
+        [data-theme="dark"] .folder-path {
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .event-stream-content {
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .log-entry {
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .prompt-title {
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .prompt-group {
+            border-left: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .commit-item {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .commit-item:hover {
+            background: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        [data-theme="dark"] .commit-hash,
+        [data-theme="dark"] .commit-message,
+        [data-theme="dark"] .commit-status {
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .commit-sidebar {
+            background: var(--bg-color);
+            border-left: 2px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .commit-sidebar .sidebar-header {
+            background: var(--bg-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .commit-sidebar .sidebar-header h3 {
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .close-btn {
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .close-btn:hover {
+            background: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        [data-theme="dark"] .connection-status {
+            border-top: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .connection-text {
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .clear-logs {
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .clear-logs:hover {
+            background: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        [data-theme="dark"] .event-stream-header {
+            color: var(--text-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .detail-section h4 {
+            color: var(--text-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .detail-label,
+        [data-theme="dark"] .detail-value {
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .detail-value.monospace {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .file-list li {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .sidebar-status {
+            color: var(--text-color);
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>GitDaddy</h1>
-        <p>Automatically execute git commands when files change</p>
-    </div>
 
-    <div class="status-bar">
-        <div class="status">
-            <div class="status-indicator" id="statusIndicator"></div>
-            <span id="statusText">Stopped</span>
-        </div>
-        <div id="sessionInfo"></div>
-    </div>
 
     <div class="main-content">
-        <div class="controls">
-            <div class="folder-selection">
-                <select class="folder-select" id="folderSelect">
-                    <option value="" class="placeholder">Select a project folder…</option>
-                </select>
-                <button class="btn btn-success" id="startBtn" disabled>Start Watching</button>
-                <button class="btn btn-danger" id="stopBtn" disabled>Stop</button>
+        <!-- Left Sidebar (30%) -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo" aria-label="Stash logo">
+                    <svg viewBox="0 0 404 118" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.6275 20C16.1275 36 38.5221 70.185 101.127 20C163.733 -30.185 178.478 32.5706 189.127 20C199.777 7.42933 202.627 20 202.627 20V62C191.735 80.7772 184.894 90.5664 166.127 101.5C124.137 126.742 52.6292 118.866 33.1275 101.5C9.12713 87.5001 -6.47374 57.825 2.62746 20C7.66126 10.4544 13.8946 6.26046 28.6275 0C28.6275 0 19.1275 3.99999 17.6275 20Z" fill="currentColor"/>
+                        <path d="M386.126 20C387.626 36 365.232 70.185 302.626 20C240.021 -30.185 225.276 32.5706 214.626 20C203.977 7.42933 201.126 20 201.126 20V62C212.019 80.7772 218.86 90.5664 237.626 101.5C279.617 126.742 351.125 118.866 370.626 101.5C394.627 87.5001 410.228 57.825 401.126 20C396.093 10.4544 389.859 6.26046 375.126 0C375.126 0 384.626 3.99999 386.126 20Z" fill="currentColor"/>
+                    </svg>
+                </div>
+                <h2 class="sidebar-title">GitDaddy</h2>
+            </div>
+            
+
+            
+            <div class="controls">
+                <div class="folder-selection">
+                    <select class="folder-select" id="folderSelect">
+                        <option value="" class="placeholder">Select a project folder…</option>
+                    </select>
+                    <div class="folder-buttons">
+                        <button class="btn btn-success" id="startBtn" disabled>Start Watching</button>
+                        <button class="btn btn-danger" id="stopBtn" disabled>Stop</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Night Mode Toggle -->
+            <div class="night-mode-toggle">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="nightModeToggle">
+                    <span class="slider"></span>
+                </label>
+                <span class="toggle-label">Night Mode</span>
+            </div>
+            
+            <!-- Stream Events Toggle -->
+            <div class="stream-events-toggle">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="streamEventsToggle" checked>
+                    <span class="slider"></span>
+                </label>
+                <span class="toggle-label">Show Stream Events</span>
+            </div>
+            
+            <!-- Connection Status at bottom of sidebar -->
+            <div class="connection-status">
+                <div class="connection-indicator" id="connectionIndicator"></div>
+                <span class="connection-text" id="connectionText">Disconnected</span>
             </div>
         </div>
 
-        <div class="event-stream">
-            <div class="event-stream-header">
-                <span>Event Stream</span>
-                <div>
-                    <button class="btn btn-primary" id="finishNowBtn" style="display:none; margin-right: 8px;">Finish now</button>
-                    <button class="clear-logs" id="clearLogsBtn">Clear</button>
+        <!-- Right Column (70%) -->
+        <div class="right-column">
+            <!-- Prompt Activity Section -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3>Prompt Activity</h3>
+                <button class="btn btn-secondary" id="refreshCommitsBtn" onclick="loadRecentCommits()">
+                    <span>↻</span> Refresh
+                </button>
+            </div>
+            <div class="activity-section">
+                <div class="loading-commits">
+                    <div class="loading-spinner"></div>
+                    <span>Loading recent commits...</span>
                 </div>
             </div>
-            <div class="event-stream-content" id="eventStream">
-                <div class="log-entry">
-                    <span class="timestamp">[Ready]</span>
-                    <span>Application started. Select a .jsonl file to begin watching.</span>
+
+            <!-- Event Stream Section -->
+            <div class="event-section">
+                <div class="event-stream-header">
+                    <span>Event Stream</span>
+                    <div>
+                        <div class="sidebar-status" style="display: inline-flex; align-items: center; margin-right: 16px;">
+                            <div class="status-indicator" id="statusIndicator"></div>
+                            <span id="statusText">Stopped</span>
+                        </div>
+                        <button class="btn btn-primary" id="finishNowBtn" style="display:none; margin-right: 8px;">Finish now</button>
+                        <button class="clear-logs" id="clearLogsBtn">Clear</button>
+                    </div>
+                </div>
+                <div class="event-stream-content" id="eventStream">
+                    <div class="log-entry">
+                        <span class="timestamp">[Ready]</span>
+                        <span>Application started. Select a .jsonl file to begin watching.</span>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Commit Details Sidebar -->
+    <div class="commit-sidebar" id="commitSidebar">
+        <div class="sidebar-header">
+            <h3>Commit Details</h3>
+            <button class="close-btn" onclick="hideCommitDetails()">×</button>
+        </div>
+        <div class="sidebar-content" id="sidebarContent">
+            <!-- Content will be populated by JavaScript -->
         </div>
     </div>
 
