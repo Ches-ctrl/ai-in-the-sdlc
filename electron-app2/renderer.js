@@ -33,7 +33,7 @@ let baseProjectsDir = '';
 let connectionCheckInterval = null;
 
 // Configuration
-const API_ENDPOINT = "https://37db756b0032.ngrok-free.app";
+const API_ENDPOINT = "https://fdbe968c4c98.ngrok-free.app";
 
 // Event listeners
 startBtn.addEventListener('click', startWatching);
@@ -129,9 +129,11 @@ function getCommonPrefix(strings) {
     return prefix;
 }
 
+
 folderSelect.addEventListener('change', async () => {
     selectedFile = folderSelect.value || null;
     startBtn.disabled = !selectedFile;
+
     if (selectedFile) {
         addLogEntry('log', `Folder selected: ${selectedFile}`);
         // Auto-start watching when a folder is selected
@@ -212,6 +214,9 @@ function handleUpdate(update) {
         case 'websocket':
             addLogEntry('websocket', data);
             break;
+        case 'cwd-updated':
+            updateCWDDisplay(data.cwd);
+            break;
     // case 'waiting':
     //   showFinishButton(data);
     //   break;
@@ -242,6 +247,14 @@ function updateStatus(status) {
             break;
         default:
             statusIndicator.classList.add('error');
+    }
+}
+
+function updateCWDDisplay(cwd) {
+    const cwdElement = document.getElementById('cwd');
+    if (cwdElement) {
+        cwdElement.textContent = cwd || 'No project detected';
+        console.log('Updated CWD display:', cwd);
     }
 }
 
@@ -393,8 +406,22 @@ let commitData = {};
 
 // Fetch recent commits from the API
 async function fetchRecentCommits(limit = 20) {
+
+    // Check for active cwd, skip default value
+    const cwd_element = document.getElementById('cwd');
+    let cwd = null;
+
+    if (cwd_element) {
+        cwd = cwd_element.textContent;
+        cwd = encodeURIComponent(cwd);
+    }
+
     try {
-        const response = await fetch(`${API_ENDPOINT}/commits/recent?limit=${limit}`, {
+        let url = `${API_ENDPOINT}/commits/recent?limit=${limit}`;
+        if (cwd) {
+            url += `&cwd=${cwd}`;
+        }
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'ngrok-skip-browser-warning': 'true',
@@ -420,7 +447,6 @@ function transformCommitData(apiCommits) {
     const transformed = {};
     
     apiCommits.forEach((commit, index) => {
-        console.log('Commit:', commit);
         const commitId = `commit_${commit.commit_hash}`;
         
         // Determine status based on metadata or default logic
@@ -518,12 +544,14 @@ function renderPromptActivity(commitGroups) {
 // Load and display commits
 async function loadRecentCommits() {
     try {
-        addLogEntry('info', 'Fetching recent commits...');
-        
+
         const apiCommits = await fetchRecentCommits();
         
         if (apiCommits.length === 0) {
-            addLogEntry('warning', 'No commits found');
+            // Clear existing commits since this indicates a project switch
+            commitData = {};
+            const activitySection = document.querySelector('.activity-section');
+            activitySection.innerHTML = '<div class="no-commits">No recent commits found.</div>';
             return;
         }
         

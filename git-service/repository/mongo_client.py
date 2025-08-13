@@ -82,7 +82,7 @@ class MongoClientService:
             raise
     
     # LOG METHODS
-    def insert_log(self, data: Dict[str, Any]) -> str:
+    def insert_log(self, data: Dict[str, Any], user_id: str) -> str:
         """
         Insert a log entry into the logs collection.
         
@@ -97,6 +97,7 @@ class MongoClientService:
         try:
             log_entry = {
                 "timestamp": datetime.utcnow(),
+                "user_id": user_id,
                 **data
             }
             
@@ -111,7 +112,8 @@ class MongoClientService:
                  level: Optional[str] = None, 
                  limit: int = 100, 
                  start_date: Optional[datetime] = None,
-                 end_date: Optional[datetime] = None) -> List[Dict[str, Any]]:
+                 end_date: Optional[datetime] = None,
+                 user_id: str = None) -> List[Dict[str, Any]]:
         """
         Retrieve logs from the collection.
         
@@ -126,7 +128,7 @@ class MongoClientService:
         """
         try:
             # Build query
-            query = {}
+            query = {"user_id": user_id}
             
             if start_date or end_date:
                 query["timestamp"] = {}
@@ -151,6 +153,7 @@ class MongoClientService:
     
     # COMMIT METHODS
     def insert_commit(self, 
+                     user_id: str,
                      commit_hash: str, 
                      message: str, 
                      author: str,
@@ -184,6 +187,7 @@ class MongoClientService:
             embedding = self._embed_text(embed_text)
             
             commit_doc = {
+                "user_id": user_id,
                 "commit_hash": commit_hash,
                 "message": message,
                 "prompt": prompt,
@@ -204,7 +208,7 @@ class MongoClientService:
             logger.error(f"Error inserting commit: {e}")
             raise
     
-    def get_commit_by_hash(self, commit_hash: str) -> Optional[Dict[str, Any]]:
+    def get_commit_by_hash(self, commit_hash: str, user_id: str) -> Optional[Dict[str, Any]]:
         """
         Retrieve a commit by its hash.
         
@@ -215,7 +219,7 @@ class MongoClientService:
             Commit document or None if not found
         """
         try:
-            commit = self.commits_collection.find_one({"commit_hash": commit_hash})
+            commit = self.commits_collection.find_one({"commit_hash": commit_hash, "user_id": user_id})
             if commit:
                 commit["_id"] = str(commit["_id"])
             return commit
@@ -226,7 +230,8 @@ class MongoClientService:
     def get_commits_by_similarity(self, 
                                  query_text: str, 
                                  limit: int = 5, 
-                                 min_score: float = 0.7) -> List[Dict[str, Any]]:
+                                 min_score: float = 0.7,
+                                 user_id: str = None) -> List[Dict[str, Any]]:
         """
         Retrieve commits similar to the query text using vector search.
         
@@ -269,7 +274,8 @@ class MongoClientService:
                 },
                 {
                     "$match": {
-                        "score": {"$gte": min_score}
+                        "score": {"$gte": min_score},
+                        "user_id": user_id
                     }
                 }
             ]
@@ -287,7 +293,7 @@ class MongoClientService:
             logger.error(f"Error in vector search: {e}")
             raise
     
-    def get_recent_commits(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_recent_commits(self, limit: int = 10, user_id: str = None, cwd: str = None) -> List[Dict[str, Any]]:
         """
         Retrieve recent commits.
         
@@ -298,7 +304,11 @@ class MongoClientService:
             List of recent commit documents
         """
         try:
-            cursor = self.commits_collection.find({}).sort("timestamp", -1).limit(limit)
+            query = {"user_id": user_id}
+            if cwd:
+                query["cwd"] = cwd
+            cursor = self.commits_collection.find(query).sort("timestamp", -1).limit(limit)
+            
             commits = list(cursor)
             
             # Convert ObjectId to string

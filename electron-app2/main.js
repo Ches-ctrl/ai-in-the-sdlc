@@ -10,7 +10,7 @@ const { spawn } = require('child_process');
 let mainWindow;
 
 // Configuration
-const API_ENDPOINT = "https://37db756b0032.ngrok-free.app";
+const API_ENDPOINT = "https://fdbe968c4c98.ngrok-free.app";
 
 function createWindow() {
   // Create the browser window
@@ -126,18 +126,30 @@ function finalizeAssistant(messageId, reason = 'timeout') {
   }
 }
 
-// // Allow renderer to flush pending wait early
-// ipcMain.handle('flush-wait', async (event, messageId) => {
-//   try {
-//     if (messageId && pendingAssistantResponses[messageId]) {
-//       finalizeAssistant(messageId, 'manual');
-//       return { success: true };
-//     }
-//     return { success: false, error: 'No pending wait for provided messageId' };
-//   } catch (error) {
-//     return { success: false, error: error.message };
-//   }
-// });
+function updateCWD(selectedFile) {
+  // Find all files in selectedFile
+  const files = fs.readdirSync(selectedFile);
+  for (const file of files) {
+      if (file.endsWith('.jsonl')) {
+        const filePath = path.join(selectedFile, file);
+        const content = fs.readFileSync(filePath, 'utf8');
+
+        // Read first line of file
+        const firstLine = content.split('\n')[0];
+
+        // load json line
+        const jsonLine = JSON.parse(firstLine);
+        let detectedCwd = jsonLine.cwd || null;
+
+        if (detectedCwd) {
+          // Send CWD to renderer process via IPC
+          sendToRenderer('cwd-updated', { cwd: detectedCwd });
+          return detectedCwd;
+        }
+      }
+  }
+  return null;
+}
 
 ipcMain.handle('start-watching', async (event, filePath) => {
   try {
@@ -151,6 +163,9 @@ ipcMain.handle('start-watching', async (event, filePath) => {
     if (!stat.isDirectory()) {
       throw new Error('Selected path is not a directory');
     }
+
+    // Update cwd
+    updateCWD(filePath);
 
     const watchFolder = filePath;
     watchFolderPath = watchFolder;

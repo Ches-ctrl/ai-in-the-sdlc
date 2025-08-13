@@ -16,6 +16,7 @@ from src.git_examine import find_commit_messages
 from src.commit_execute import execute_commits
 
 app = FastAPI(title="Git Service API", version="1.0.0")
+USER_ID = '123floris'
 
 # Add CORS middleware
 app.add_middleware(
@@ -26,16 +27,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Databases
 mongo_client: MongoClientService = get_mongo_client()
-
-
-# Store for session information (in production, use a proper database)
 active_sessions: Dict[str, SessionInfo] = {}
 
 # Health check endpoint
 @app.get("/health")
 async def health_check(): 
-    return {"running": True}
+    return "ok"
 
 # Root endpoint
 @app.get("/")
@@ -45,7 +44,7 @@ async def root():
 @app.post("/logs/raw")
 async def raw_logs(request: RawLogsRequest):
     print(f"[RAW LOGS] Received raw logs: {request.data}")
-    mongo_client.insert_log(request.data)
+    mongo_client.insert_log(request.data, USER_ID)
     return {"message": "Logs received"}
 
 # Session started endpoint - generates and sends session info, returns OK
@@ -111,6 +110,7 @@ async def websocket_execute_command(websocket: WebSocket):
             # Add messages to mongo_async
             for commit_message, result in zip(commit_messages.commit_messages, results):
                 mongo_client.insert_commit(
+                    user_id=USER_ID,
                     commit_hash=result["commit_hash"],
                     message=commit_message.message,
                     author="AI",
@@ -165,10 +165,10 @@ async def websocket_execute_command(websocket: WebSocket):
 
 # Commit endpoints for frontend integration
 @app.get("/commits/recent")
-async def get_recent_commits(limit: int = 10):
+async def get_recent_commits(limit: int = 10, cwd: str = None):
     """Get recent commits from MongoDB"""
     try:
-        commits = mongo_client.get_recent_commits(limit=limit)
+        commits = mongo_client.get_recent_commits(limit=limit, user_id=USER_ID, cwd=cwd)
         return commits
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching commits: {str(e)}")
@@ -185,7 +185,8 @@ async def search_commits(request: SearchCommitsRequest):
         results = mongo_client.get_commits_by_similarity(
             query_text=request.query_text,
             limit=request.limit,
-            min_score=request.min_score
+            min_score=request.min_score,
+            user_id=USER_ID
         )
         return results
     except Exception as e:
@@ -195,7 +196,7 @@ async def search_commits(request: SearchCommitsRequest):
 async def get_commit_by_hash(commit_hash: str):
     """Get a specific commit by hash"""
     try:
-        commit = mongo_client.get_commit_by_hash(commit_hash)
+        commit = mongo_client.get_commit_by_hash(commit_hash, user_id=USER_ID)
         if not commit:
             raise HTTPException(status_code=404, detail="Commit not found")
         return commit
