@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stopWatching: () => ipcRenderer.invoke('stop-watching'),
   onUpdate: (callback) => ipcRenderer.on('update', callback),
   listProjectFolders: () => ipcRenderer.invoke('list-project-folders'),
+  // Authentication methods
+  setAuthToken: (token) => ipcRenderer.invoke('set-auth-token', token),
+  clearAuthToken: () => ipcRenderer.invoke('clear-auth-token'),
   // flushWait: (messageId) => ipcRenderer.invoke('flush-wait', messageId)
 });
 

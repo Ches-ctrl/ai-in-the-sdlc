@@ -70,6 +70,84 @@
             padding: 20px;
         }
 
+        .auth-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #000;
+            background: white;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .auth-form input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #000;
+            font-size: 14px;
+        }
+
+        .auth-form button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0 5px 0;
+            background: white;
+            border: 1px solid #000;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .auth-form button:hover {
+            background: #f5f5f5;
+        }
+
+        .auth-toggle {
+            background: none;
+            border: none;
+            color: #3b82f6;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 12px;
+            padding: 0;
+            margin: 5px 0;
+        }
+
+        .user-info {
+            display: none;
+            padding: 10px;
+            background: #f0f9ff;
+            border: 1px solid #3b82f6;
+        }
+
+        .user-info.active {
+            display: block;
+        }
+
+        .user-email {
+            font-weight: 600;
+            color: #1e40af;
+        }
+
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: 1px solid #dc2626;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+
         .sidebar-header {
             text-align: center;
             margin-bottom: 20px;
@@ -853,6 +931,39 @@
                     </svg>
                 </div>
                 <h2 class="sidebar-title">GitDaddy</h2>
+            </div>
+
+            <!-- Authentication Section -->
+            <div class="auth-section">
+                <!-- Login Form -->
+                <div id="loginForm" class="auth-form active">
+                    <h3 style="margin: 0 0 15px 0; font-size: 16px;">Login</h3>
+                    <input type="email" id="loginEmail" placeholder="Email" required>
+                    <input type="password" id="loginPassword" placeholder="Password" required>
+                    <button id="loginBtn">Login</button>
+                    <button type="button" class="auth-toggle" onclick="showSignupForm()">
+                        Don't have an account? Sign up
+                    </button>
+                </div>
+
+                <!-- Signup Form -->
+                <div id="signupForm" class="auth-form">
+                    <h3 style="margin: 0 0 15px 0; font-size: 16px;">Sign Up</h3>
+                    <input type="text" id="signupName" placeholder="Full Name (optional)">
+                    <input type="email" id="signupEmail" placeholder="Email" required>
+                    <input type="password" id="signupPassword" placeholder="Password" required>
+                    <button id="signupBtn">Create Account</button>
+                    <button type="button" class="auth-toggle" onclick="showLoginForm()">
+                        Already have an account? Login
+                    </button>
+                </div>
+
+                <!-- User Info (shown when logged in) -->
+                <div id="userInfo" class="user-info">
+                    <h3 style="margin: 0 0 10px 0; font-size: 16px;">Welcome!</h3>
+                    <div class="user-email" id="userEmail"></div>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
             </div>
             
 

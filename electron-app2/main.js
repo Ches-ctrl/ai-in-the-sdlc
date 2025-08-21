@@ -10,7 +10,10 @@ const { spawn } = require('child_process');
 let mainWindow;
 
 // Configuration
-const API_ENDPOINT = "https://fdbe968c4c98.ngrok-free.app";
+const API_ENDPOINT = "https://c98be102e98d.ngrok-free.app";
+
+// Authentication token storage
+let authToken = null;
 
 function createWindow() {
   // Create the browser window
@@ -72,6 +75,30 @@ ipcMain.handle('list-project-folders', async () => {
     return { success: false, error: error.message };
   }
 });
+
+// Authentication handlers
+ipcMain.handle('set-auth-token', async (event, token) => {
+  authToken = token;
+  return { success: true };
+});
+
+ipcMain.handle('clear-auth-token', async () => {
+  authToken = null;
+  return { success: true };
+});
+
+// Helper function to get authenticated headers
+function getAuthHeaders() {
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  
+  return headers;
+}
 
 // Helpers
 function getNormalizedLines(content) {
@@ -431,7 +458,10 @@ async function sendStartConvo(prompt, cwd) {
     const response = await axios.post(`${API_ENDPOINT}/session/start`, {
       user_prompt: prompt,
       cwd: cwd_string
-    }, { timeout: 10000 });
+    }, { 
+      headers: getAuthHeaders(),
+      timeout: 10000 
+    });
     
     sessionId = response.data.session_id;
     sendToRenderer('log', `Session started: ${sessionId}`);
@@ -456,7 +486,10 @@ async function sendEndConvo(sessionId, finalOut, cwd) {
         todos_completed: 0,
         files_modified: []
       }
-    }, { timeout: 15000 });
+    }, { 
+      headers: getAuthHeaders(),
+      timeout: 15000 
+    });
     
     if (response.status === 200) {
       sendToRenderer('log', 'Session ended successfully');
@@ -481,10 +514,17 @@ function startGitOperations(sessionId, cwd) {
     
     ws.on('open', () => {
       sendToRenderer('log', 'WebSocket connected');
-      // Notify server that session has finished
+      
+      // First, authenticate with the server
+      if (!authToken) {
+        sendToRenderer('error', 'No authentication token available for WebSocket');
+        ws.close();
+        return;
+      }
+      
       ws.send(JSON.stringify({
-        session_id: sessionId,
-        message_type: "session_finished"
+        message_type: "authenticate",
+        token: authToken
       }));
     });
     
@@ -492,6 +532,24 @@ function startGitOperations(sessionId, cwd) {
       try {
         const message = JSON.parse(data.toString());
         sendToRenderer('websocket', `Received: ${JSON.stringify(message)}`);
+        
+        // Handle authentication response
+        if (message.message_type === "auth_success") {
+          sendToRenderer('log', 'WebSocket authenticated successfully');
+          // Now send the session finished message
+          ws.send(JSON.stringify({
+            session_id: sessionId,
+            message_type: "session_finished"
+          }));
+          return;
+        }
+        
+        // Handle authentication error
+        if (message.error) {
+          sendToRenderer('error', `WebSocket authentication failed: ${message.error}`);
+          ws.close();
+          return;
+        }
         
         if (message.message_type === "session_finished") {
           sendToRenderer('log', `Session ${sessionId} completed successfully`);

@@ -32,8 +32,225 @@ let selectedFile = null;
 let baseProjectsDir = '';
 let connectionCheckInterval = null;
 
+// Authentication state
+let authToken = null;
+let currentUser = null;
+let isAuthenticated = false;
+
 // Configuration
-const API_ENDPOINT = "https://fdbe968c4c98.ngrok-free.app";
+const API_ENDPOINT = "https://c98be102e98d.ngrok-free.app";
+
+// Authentication Functions
+function getStoredToken() {
+    return localStorage.getItem('authToken');
+}
+
+function setStoredToken(token) {
+    localStorage.setItem('authToken', token);
+    authToken = token;
+    // Also set in main process
+    window.electronAPI.setAuthToken(token);
+}
+
+function removeStoredToken() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
+    authToken = null;
+    currentUser = null;
+    isAuthenticated = false;
+    // Also clear in main process
+    window.electronAPI.clearAuthToken();
+}
+
+function getStoredUser() {
+    const userStr = localStorage.getItem('currentUser');
+    return userStr ? JSON.parse(userStr) : null;
+}
+
+function setStoredUser(user) {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    currentUser = user;
+}
+
+// Get authenticated headers for API calls
+function getAuthHeaders() {
+    const headers = {
+        'ngrok-skip-browser-warning': 'true',
+        'Content-Type': 'application/json'
+    };
+    
+    if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    
+    return headers;
+}
+
+// Show/hide authentication forms
+function showLoginForm() {
+    document.getElementById('loginForm').classList.add('active');
+    document.getElementById('signupForm').classList.remove('active');
+}
+
+function showSignupForm() {
+    document.getElementById('loginForm').classList.remove('active');
+    document.getElementById('signupForm').classList.add('active');
+}
+
+// Update UI based on authentication state
+function updateAuthUI() {
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    const userInfo = document.getElementById('userInfo');
+    const userEmail = document.getElementById('userEmail');
+    
+    if (isAuthenticated && currentUser) {
+        loginForm.classList.remove('active');
+        signupForm.classList.remove('active');
+        userInfo.classList.add('active');
+        userEmail.textContent = currentUser.email;
+    } else {
+        userInfo.classList.remove('active');
+        loginForm.classList.add('active');
+    }
+}
+
+// Login function
+async function login(email, password) {
+    try {
+        const response = await fetch(`${API_ENDPOINT}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
+            },
+            body: JSON.stringify({ email, password })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Login failed');
+        }
+
+        const data = await response.json();
+        setStoredToken(data.access_token);
+        setStoredUser(data.user);
+        isAuthenticated = true;
+        
+        updateAuthUI();
+        addLogEntry('success', `Logged in as ${data.user.email}`);
+        
+        // Check connection after login
+        checkConnection();
+        
+        return true;
+    } catch (error) {
+        console.error('Login error:', error);
+        addLogEntry('error', `Login failed: ${error.message}`);
+        return false;
+    }
+}
+
+// Signup function
+async function signup(email, password, fullName = '') {
+    try {
+        const response = await fetch(`${API_ENDPOINT}/auth/signup`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
+            },
+            body: JSON.stringify({ 
+                email, 
+                password, 
+                full_name: fullName 
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Signup failed');
+        }
+
+        const data = await response.json();
+        setStoredToken(data.access_token);
+        setStoredUser(data.user);
+        isAuthenticated = true;
+        
+        updateAuthUI();
+        addLogEntry('success', `Account created and logged in as ${data.user.email}`);
+        
+        // Check connection after signup
+        checkConnection();
+        
+        return true;
+    } catch (error) {
+        console.error('Signup error:', error);
+        addLogEntry('error', `Signup failed: ${error.message}`);
+        return false;
+    }
+}
+
+// Logout function
+async function logout() {
+    try {
+        if (authToken) {
+            await fetch(`${API_ENDPOINT}/auth/logout`, {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+    } finally {
+        removeStoredToken();
+        isAuthenticated = false;
+        updateAuthUI();
+        addLogEntry('info', 'Logged out successfully');
+        
+        // Stop watching if active
+        if (isWatching) {
+            stopWatching();
+        }
+    }
+}
+
+// Check if user is authenticated
+async function checkAuthStatus() {
+    const storedToken = getStoredToken();
+    const storedUser = getStoredUser();
+    
+    if (storedToken && storedUser) {
+        authToken = storedToken;
+        currentUser = storedUser;
+        
+        // Update main process with stored token
+        window.electronAPI.setAuthToken(storedToken);
+        
+        // Verify token is still valid
+        try {
+            const response = await fetch(`${API_ENDPOINT}/auth/me`, {
+                headers: getAuthHeaders()
+            });
+            
+            if (response.ok) {
+                isAuthenticated = true;
+                updateAuthUI();
+                return true;
+            } else {
+                // Token expired or invalid
+                removeStoredToken();
+            }
+        } catch (error) {
+            console.error('Auth check error:', error);
+            removeStoredToken();
+        }
+    }
+    
+    isAuthenticated = false;
+    updateAuthUI();
+    return false;
+}
 
 // Event listeners
 startBtn.addEventListener('click', startWatching);
@@ -42,6 +259,53 @@ clearLogsBtn.addEventListener('click', clearLogs);
 nightModeToggle.addEventListener('change', toggleNightMode);
 streamEventsToggle.addEventListener('change', toggleStreamEvents);
 // finishNowBtn.addEventListener('click', flushWait);
+
+// Authentication event listeners
+document.getElementById('loginBtn').addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+        addLogEntry('error', 'Please enter both email and password');
+        return;
+    }
+    
+    await login(email, password);
+});
+
+document.getElementById('signupBtn').addEventListener('click', async () => {
+    const email = document.getElementById('signupEmail').value;
+    const password = document.getElementById('signupPassword').value;
+    const fullName = document.getElementById('signupName').value;
+    
+    if (!email || !password) {
+        addLogEntry('error', 'Please enter both email and password');
+        return;
+    }
+    
+    await signup(email, password, fullName);
+});
+
+// Handle enter key in forms
+document.getElementById('loginEmail').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+
+document.getElementById('loginPassword').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+
+document.getElementById('signupEmail').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('signupBtn').click();
+});
+
+document.getElementById('signupPassword').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('signupBtn').click();
+});
+
+document.getElementById('signupName').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('signupBtn').click();
+});
 
 // Listen for updates from main process
 window.electronAPI.onUpdate((event, update) => {
@@ -145,6 +409,11 @@ folderSelect.addEventListener('change', async () => {
 });
 
 async function startWatching() {
+    if (!isAuthenticated) {
+        addLogEntry('error', 'Please login first to start watching');
+        return;
+    }
+    
     if (!selectedFile) {
         addLogEntry('error', 'No folder selected');
         return;
@@ -316,9 +585,7 @@ async function checkConnectionStatus() {
     try {
         const response = await fetch(`${API_ENDPOINT}/health`, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getAuthHeaders(),
             timeout: 5000 // 5 second timeout
         });
         
@@ -342,6 +609,11 @@ function updateConnectionStatus(isConnected) {
         connectionIndicator.classList.remove('connected');
         connectionText.textContent = 'Disconnected';
     }
+}
+
+// Simple alias for checkConnectionStatus
+function checkConnection() {
+    checkConnectionStatus();
 }
 
 function startConnectionChecking() {
@@ -423,10 +695,7 @@ async function fetchRecentCommits(limit = 20) {
         }
         const response = await fetch(url, {
             method: 'GET',
-            headers: {
-                'ngrok-skip-browser-warning': 'true',
-                'Content-Type': 'application/json'
-            }
+            headers: getAuthHeaders()
         });
 
         if (!response.ok) {
@@ -753,4 +1022,11 @@ document.addEventListener('click', (e) => {
 // Initialize theme and stream events on page load
 initializeTheme();
 initializeStreamEvents();
+
+// Initialize authentication on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    await checkAuthStatus();
+    populateProjectFolders();
+    startConnectionChecking();
+});
 
