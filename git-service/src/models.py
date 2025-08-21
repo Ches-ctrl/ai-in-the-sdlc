@@ -28,6 +28,7 @@ class SessionInfo(BaseModel):
     timestamp: datetime
     git_commit_hash: str
     cwd: str
+    user_id: str
     session_end_request: Optional[SessionEndRequest] = None
     features: List[str] =[]
 
